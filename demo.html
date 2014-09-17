@@ -142,6 +142,17 @@ editor.on("change",  function() {
     </div>
 </div>
 <script>
+
+function aprinter_resolve_ref(target_arr, target_id_field, target_id) {
+    for (var index in target_arr) {
+        var target = target_arr[index];
+        if (target[target_id_field] == target_id) {
+            return target;
+        }
+    }
+    return null;
+}
+
 (function() {
     var schema;
     if(window.location.href.match('[?&]schema=([^&]+)')) {
@@ -156,12 +167,16 @@ editor.on("change",  function() {
     // Default starting schema
     if(!schema) {
         schema = {
-  "additionalProperties": false, 
+  "title": "Configuration editor", 
   "required": [
     "_compoundName", 
     "configurations", 
     "boards"
   ], 
+  "options": {
+    "disable_collapse": true
+  }, 
+  "additionalProperties": false, 
   "type": "object", 
   "properties": {
     "_compoundName": {
@@ -173,27 +188,6 @@ editor.on("change",  function() {
         "hidden": true
       }
     }, 
-    "dummy": {
-        "type": "string",
-        "enum": ["A", "B"]
-    },
-    "test": {
-        "type": "string",
-        "watch": {
-            "watch_dummy": "dummy"
-        },
-        "template": "return vars.watch_dummy"
-    },
-    "boo": {
-        "type": "string",
-        "watch": {
-            "watch_dummy": "dummy"
-        },
-        "template": "return vars.watch_dummy;",
-        "options": {
-            "derived": true
-        }
-    },
     "boards": {
       "items": {
         "title": "Board", 
@@ -250,19 +244,6 @@ editor.on("change",  function() {
     }, 
     "configurations": {
       "items": {
-        "title": "Configuration", 
-        "required": [
-          "_compoundName", 
-          "name", 
-          "board_id", 
-          "fans", 
-          "test"
-        ], 
-        "options": {
-          "collapsed": true
-        }, 
-        "additionalProperties": false, 
-        "type": "object", 
         "properties": {
           "_compoundName": {
             "enum": [
@@ -274,8 +255,18 @@ editor.on("change",  function() {
             }
           }, 
           "board_id": {
-            "propertyOrder": 1, 
+            "watch": {
+              "watch_array": "boards"
+            }, 
+            "enumSource": [
+              {
+                "source": "watch_array", 
+                "value": "return vars.item[\"identifier\"];", 
+                "title": "return vars.item[\"name\"];"
+              }
+            ], 
             "type": "string", 
+            "propertyOrder": 1, 
             "title": "Board"
           }, 
           "fans": {
@@ -314,24 +305,41 @@ editor.on("change",  function() {
             "propertyOrder": 2, 
             "title": "Fans"
           }, 
-          "test": {
-            "propertyOrder": 3, 
-            "type": "string", 
-            "title": "TEST"
-          }, 
           "name": {
             "propertyOrder": 0, 
             "type": "string", 
             "title": "Name"
+          }, 
+          "board_data": {
+            "watch": {
+              "watch_array": "boards", 
+              "watch_id": "id_configuration.board_id"
+            }, 
+            "options": {
+              "derived": true
+            }, 
+            "template": "return aprinter_resolve_ref(vars.watch_array, \"identifier\", vars.watch_id);"
           }
+        }, 
+        "title": "Configuration", 
+        "required": [
+          "_compoundName", 
+          "name", 
+          "board_id", 
+          "fans"
+        ], 
+        "id": "id_configuration", 
+        "additionalProperties": false, 
+        "type": "object", 
+        "options": {
+          "collapsed": true
         }
       }, 
       "type": "array", 
       "propertyOrder": 0, 
       "title": "Configurations"
     }
-  }, 
-  "title": "Configuration editor"
+  }
 }
 
     }
