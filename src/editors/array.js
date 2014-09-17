@@ -282,7 +282,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       }
     });
   },
-  setValue: function(value, initial) {
+  setValue: function(value, initial, forceRefresh) {
     // Update the array's value, adding/removing rows when necessary
     value = value || [];
     
@@ -337,7 +337,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
 
     self.active_tab = new_active_tab;
 
-    self.refreshValue(initial);
+    self.refreshValue(initial || forceRefresh);
     self.refreshTabs();
 
     self.onChange();
@@ -628,7 +628,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       if(self.rows.length > 1 && self.rows[self.rows.length-1].tab === self.active_tab) new_active_tab = self.rows[self.rows.length-2].tab;
       
       rows.pop();
-      self.setValue(rows);
+      self.setValue(rows, false, true);
       if(new_active_tab) {
         self.active_tab = new_active_tab;
         self.refreshTabs();
