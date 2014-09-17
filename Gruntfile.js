@@ -81,7 +81,8 @@ module.exports = function(grunt) {
         nonbsp: true,
         nonew: true,
         immed: true,
-        latedef: true
+        latedef: true,
+        devel: true
       },
       beforeconcat: [
         'src/class.js',
