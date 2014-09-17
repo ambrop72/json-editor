@@ -156,82 +156,184 @@ editor.on("change",  function() {
     // Default starting schema
     if(!schema) {
         schema = {
-            title: "Person",
-            type: "object",
-            properties: {
-                name: {
-                    type: "string",
-                    description: "First and Last name",
-                    minLength: 4,
-                    default: "Jeremy Dorn"
-                },
-                age: {
-                    type: "integer",
-                    default: 25,
-                    minimum: 18,
-                    maximum: 99
-                },
-                favorite_color: {
-                    type: "string",
-                    format: "color",
-                    title: "favorite color",
-                    default: "#ffa500"
-                },
-                gender: {
-                    type: "string",
-                    enum: ["male", "female"]
-                },
-                location: {
-                    type: "object",
-                    title: "Location",
-                    properties: {
-                        city: {
-                            type: "string",
-                            default: "San Francisco"
-                        },
-                        state: {
-                            type: "string",
-                            default: "CA"
-                        },
-                        citystate: {
-                            type: "string",
-                            description: "This is generated automatically from the previous two fields",
-                            template: "{{city}}, {{state}}",
-                            watch: {
-                                city: 'location.city',
-                                state: 'location.state'
-                            }
-                        }
-                    }
-                },
-                pets: {
-                    type: "array",
-                    format: "table",
-                    title: "Pets",
-                    uniqueItems: true,
-                    items: {
-                        type: "object",
-                        title: "Pet",
-                        properties: {
-                            type: {
-                                type: "string",
-                                enum: ["cat","dog","bird","reptile","other"],
-                                default: "dog"
-                            },
-                            name: {
-                                type: "string"
-                            }
-                        }
-                    },
-                    default: [
-                        {
-                            type: "dog",
-                            name: "Walter"
-                        }
-                    ]
-                }
-            }
+  "additionalProperties": false, 
+  "required": [
+    "_compoundName", 
+    "configurations", 
+    "boards"
+  ], 
+  "type": "object", 
+  "properties": {
+    "_compoundName": {
+      "enum": [
+        "editor"
+      ], 
+      "type": "string", 
+      "options": {
+        "hidden": true
+      }
+    }, 
+    "dummy": {
+        "type": "string",
+        "enum": ["A", "B"]
+    },
+    "test": {
+        "type": "string",
+        "watch": {
+            "watch_dummy": "dummy"
+        },
+        "template": "return vars.watch_dummy"
+    },
+    "boo": {
+        "type": "string",
+        "watch": {
+            "watch_dummy": "dummy"
+        },
+        "template": "return vars.watch_dummy;",
+        "options": {
+            "derived": true
         }
+    },
+    "boards": {
+      "items": {
+        "title": "Board", 
+        "required": [
+          "_compoundName", 
+          "identifier", 
+          "name", 
+          "clockImpl"
+        ], 
+        "options": {
+          "collapsed": true
+        }, 
+        "additionalProperties": false, 
+        "type": "object", 
+        "properties": {
+          "_compoundName": {
+            "enum": [
+              "board"
+            ], 
+            "type": "string", 
+            "options": {
+              "hidden": true
+            }
+          }, 
+          "identifier": {
+            "propertyOrder": 0, 
+            "type": "string", 
+            "title": "Identifier"
+          }, 
+          "name": {
+            "propertyOrder": 1, 
+            "type": "string", 
+            "title": "Name"
+          }, 
+          "clockImpl": {
+            "propertyOrder": 2, 
+            "enum": [
+              "At91Sam3uClock", 
+              "At91Sam3xClock", 
+              "AvrClock", 
+              "Mk20Clock"
+            ], 
+            "type": "string", 
+            "title": "Clock implementation"
+          }
+        }
+      }, 
+      "type": "array", 
+      "options": {
+        "collapsed": true
+      }, 
+      "propertyOrder": 1, 
+      "title": "Boards"
+    }, 
+    "configurations": {
+      "items": {
+        "title": "Configuration", 
+        "required": [
+          "_compoundName", 
+          "name", 
+          "board_id", 
+          "fans", 
+          "test"
+        ], 
+        "options": {
+          "collapsed": true
+        }, 
+        "additionalProperties": false, 
+        "type": "object", 
+        "properties": {
+          "_compoundName": {
+            "enum": [
+              "config"
+            ], 
+            "type": "string", 
+            "options": {
+              "hidden": true
+            }
+          }, 
+          "board_id": {
+            "propertyOrder": 1, 
+            "type": "string", 
+            "title": "Board"
+          }, 
+          "fans": {
+            "items": {
+              "additionalProperties": false, 
+              "required": [
+                "_compoundName", 
+                "x", 
+                "y"
+              ], 
+              "type": "object", 
+              "properties": {
+                "_compoundName": {
+                  "enum": [
+                    "fan"
+                  ], 
+                  "type": "string", 
+                  "options": {
+                    "hidden": true
+                  }
+                }, 
+                "x": {
+                  "propertyOrder": 0, 
+                  "type": "integer", 
+                  "title": "X"
+                }, 
+                "y": {
+                  "propertyOrder": 1, 
+                  "type": "integer", 
+                  "title": "Y"
+                }
+              }, 
+              "title": "Fan"
+            }, 
+            "type": "array", 
+            "propertyOrder": 2, 
+            "title": "Fans"
+          }, 
+          "test": {
+            "propertyOrder": 3, 
+            "type": "string", 
+            "title": "TEST"
+          }, 
+          "name": {
+            "propertyOrder": 0, 
+            "type": "string", 
+            "title": "Name"
+          }
+        }
+      }, 
+      "type": "array", 
+      "propertyOrder": 0, 
+      "title": "Configurations"
+    }
+  }, 
+  "title": "Configuration editor"
+}
+
     }
 
     // Divs/textareas on the page
@@ -273,7 +375,10 @@ editor.on("change",  function() {
         if(jsoneditor) jsoneditor.destroy();
         jsoneditor = new JSONEditor($editor,{
             schema: schema,
-            startval: startval
+            startval: startval,
+            disable_edit_json: true,
+            disable_properties: true,
+            template: "javascript"
         });
 
         // When the value of the editor changes, update the JSON output and validation message
