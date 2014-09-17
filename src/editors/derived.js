@@ -20,7 +20,7 @@ JSONEditor.defaults.editors.derived = JSONEditor.AbstractEditor.extend({
     onWatchedFieldChange: function() {    
         var vars = this.getWatchedFieldValues();
         this.myValue = this.template(vars);
-        this.onChange(true);
+        this.onChangeFromWatchListener();
         this._super();
     }
 });

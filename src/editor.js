@@ -12,10 +12,13 @@ JSONEditor.AbstractEditor = Class.extend({
     if(this.parent) this.parent.onChildEditorChange(this);
     else this.jsoneditor.onChange();
   },
-  onChange: function(bubble) {
+  onChange: function(bubble, from_watch_listener) {
     this.notify();
-    if(this.watch_listener) this.watch_listener();
+    if(this.watch_listener && !from_watch_listener) this.watch_listener();
     if(bubble) this.change();
+  },
+  onChangeFromWatchListener: function() {
+    this.onChange(true, true);
   },
   register: function() {
     this.jsoneditor.registerEditor(this);
