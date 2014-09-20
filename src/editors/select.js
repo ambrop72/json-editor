@@ -130,6 +130,9 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
         if(this.enumSource[i].filter) {
           this.enumSource[i].filter = this.jsoneditor.compileTemplate(this.enumSource[i].filter, this.template_engine);
         }
+        if(this.enumSource[i].sourceTemplate) {
+          this.enumSource[i].sourceTemplate = this.jsoneditor.compileTemplate(this.enumSource[i].sourceTemplate, this.template_engine);
+        }
       }
     }
     // Other, not supported
@@ -206,24 +209,31 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       var select_titles = [];
       
       for(var i=0; i<this.enumSource.length; i++) {
+        var src = this.enumSource[i];
+        
         // Constant values
-        if(Array.isArray(this.enumSource[i])) {
-          select_options = select_options.concat(this.enumSource[i]);
-          select_titles = select_titles.concat(this.enumSource[i]);
+        if(Array.isArray(src)) {
+          select_options = select_options.concat(src);
+          select_titles = select_titles.concat(src);
         }
         // A watched field
-        else if(vars[this.enumSource[i].source]) {
-          var items = vars[this.enumSource[i].source];
+        else if(src.sourceTemplate || vars[src.source]) {
+          var items;
+          if(src.sourceTemplate) {
+            items = src.sourceTemplate($extend({},vars));
+          } else {
+            items = vars[src.source];
+          }
           
           // Only use a predefined part of the array
-          if(this.enumSource[i].slice) {
-            items = Array.prototype.slice.apply(items,this.enumSource[i].slice);
+          if(src.slice) {
+            items = Array.prototype.slice.apply(items,src.slice);
           }
           // Filter the items
-          if(this.enumSource[i].filter) {
+          if(src.filter) {
             var new_items = [];
             for(j=0; j<items.length; j++) {
-              if(this.enumSource[i].filter($extend({},vars,{i:j,item:items[j]}))) new_items.push(items[j]);
+              if(src.filter($extend({},vars,{i:j,item:items[j]}))) new_items.push(items[j]);
             }
             items = new_items;
           }
@@ -234,8 +244,8 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
             var item = items[j];
             
             // Rendered value
-            if(this.enumSource[i].value) {
-              item_values[j] = this.enumSource[i].value($extend({},vars,{
+            if(src.value) {
+              item_values[j] = src.value($extend({},vars,{
                 i: j,
                 item: item
               }));
@@ -246,8 +256,8 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
             }
             
             // Rendered title
-            if(this.enumSource[i].title) {
-              item_titles[j] = this.enumSource[i].title($extend({},vars,{
+            if(src.title) {
+              item_titles[j] = src.title($extend({},vars,{
                 i: j,
                 item: item
               }));
