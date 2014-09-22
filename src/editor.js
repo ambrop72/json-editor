@@ -81,7 +81,7 @@ JSONEditor.AbstractEditor = Class.extend({
     
     // Watched fields
     this.watched = {};
-    if(this.schema.vars) this.schema.watch = this.schema.vars;
+    if(this.schema.vars) this.schema.watch1 = this.schema.vars;
     this.watched_values = {};
     this.watch_listener = function() {
       if(self.refreshWatchedFieldValues()) {
@@ -90,12 +90,12 @@ JSONEditor.AbstractEditor = Class.extend({
     };
     
     this.register();
-    if(this.schema.watch) {
+    if(this.schema.watch1) {
       var path,path_parts,first,root,adjusted_path;
 
-      for(var name in this.schema.watch) {
-        if(!this.schema.watch.hasOwnProperty(name)) continue;
-        path = this.schema.watch[name];
+      for(var name in this.schema.watch1) {
+        if(!this.schema.watch1.hasOwnProperty(name)) continue;
+        path = this.schema.watch1[name];
 
         if(Array.isArray(path)) {
           path_parts = [path[0]].concat(path[1].split('.'));
@@ -115,7 +115,7 @@ JSONEditor.AbstractEditor = Class.extend({
         // Keep track of the root node and path for use when rendering the template
         adjusted_path = root.getAttribute('data-schemapath') + '.' + path_parts.join('.');
         
-        self.jsoneditor.watch(adjusted_path,self.watch_listener);
+        self.jsoneditor.doWatch(adjusted_path,self.watch_listener);
         
         self.watched[name] = adjusted_path;
       }
@@ -311,7 +311,7 @@ JSONEditor.AbstractEditor = Class.extend({
     var self = this;
     this.unregister(this);
     $each(this.watched,function(name,adjusted_path) {
-      self.jsoneditor.unwatch(adjusted_path,self.watch_listener);
+      self.jsoneditor.doUnwatch(adjusted_path,self.watch_listener);
     });
     this.watched = null;
     this.watched_values = null;

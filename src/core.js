@@ -243,14 +243,14 @@ JSONEditor.prototype = {
     if(!this.editors) return;
     return this.editors[path];
   },
-  watch: function(path,callback) {
+  doWatch: function(path,callback) {
     this.watchlist = this.watchlist || {};
     this.watchlist[path] = this.watchlist[path] || [];
     this.watchlist[path].push(callback);
     
     return this;
   },
-  unwatch: function(path,callback) {
+  doUnwatch: function(path,callback) {
     if(!this.watchlist || !this.watchlist[path]) return this;
     // If removing all callbacks for a path
     if(!callback) {
