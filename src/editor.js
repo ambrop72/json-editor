@@ -72,7 +72,7 @@ JSONEditor.AbstractEditor = Class.extend({
       }, 'watch_listener');
     };
     
-    if(this.schema.watch) {
+    if(this.schema.hasOwnProperty('watch')) {
       for(var name in this.schema.watch) {
         if(!this.schema.watch.hasOwnProperty(name)) continue;
         var path = this.schema.watch[name];
