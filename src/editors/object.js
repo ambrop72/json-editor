@@ -657,6 +657,18 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     }
     return result;
   },
+  getFinalValue: function() {
+    var result = {};
+    for (var i in this.editors) {
+      if (!this.editors.hasOwnProperty(i)) {
+        continue;
+      }
+      if (!this.editors[i].schema.excludeFromFinalValue) {
+        result[i] = this.editors[i].getFinalValue();
+      }
+    }
+    return result;
+  },
   refreshValue: function() {
     this.value = {};
     var self = this;

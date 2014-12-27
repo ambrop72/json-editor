@@ -67,6 +67,11 @@ JSONEditor.prototype = {
 
     return this.root.getValue();
   },
+  getFinalValue: function() {
+    if(!this.ready) throw "JSON Editor not ready yet.  Listen for 'ready' event before getting the value";
+
+    return this.root.getFinalValue();
+  },
   setValue: function(value) {
     if(!this.ready) throw "JSON Editor not ready yet.  Listen for 'ready' event before setting the value";
 

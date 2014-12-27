@@ -344,6 +344,13 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     
     // TODO: sortable
   },
+  getFinalValue: function() {
+    var result = [];
+    $each(this.rows,function(i,editor) {
+      result[i] = editor.getFinalValue();
+    });
+    return result;
+  },
   refreshValue: function(force) {
     var self = this;
     var oldi = this.value? this.value.length : 0;

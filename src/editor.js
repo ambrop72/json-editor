@@ -301,6 +301,9 @@ JSONEditor.AbstractEditor = Class.extend({
   getValue: function() {
     return this.value;
   },
+  getFinalValue: function() {
+    return this.getValue();
+  },
   refreshValue: function() {
 
   },
