@@ -142,17 +142,6 @@ editor.on("change",  function() {
     </div>
 </div>
 <script>
-
-function aprinter_resolve_ref(target_arr, target_id_field, target_id) {
-    for (var index in target_arr) {
-        var target = target_arr[index];
-        if (target[target_id_field] == target_id) {
-            return target;
-        }
-    }
-    return null;
-}
-
 (function() {
     var schema;
     if(window.location.href.match('[?&]schema=([^&]+)')) {
@@ -167,181 +156,82 @@ function aprinter_resolve_ref(target_arr, target_id_field, target_id) {
     // Default starting schema
     if(!schema) {
         schema = {
-  "title": "Configuration editor", 
-  "required": [
-    "_compoundName", 
-    "configurations", 
-    "boards"
-  ], 
-  "options": {
-    "disable_collapse": true
-  }, 
-  "additionalProperties": false, 
-  "type": "object", 
-  "properties": {
-    "_compoundName": {
-      "enum": [
-        "editor"
-      ], 
-      "type": "string", 
-      "options": {
-        "hidden": true
-      }
-    }, 
-    "boards": {
-      "items": {
-        "title": "Board", 
-        "required": [
-          "_compoundName", 
-          "identifier", 
-          "name", 
-          "clockImpl"
-        ], 
-        "options": {
-          "collapsed": true
-        }, 
-        "additionalProperties": false, 
-        "type": "object", 
-        "properties": {
-          "_compoundName": {
-            "enum": [
-              "board"
-            ], 
-            "type": "string", 
-            "options": {
-              "hidden": true
-            }
-          }, 
-          "identifier": {
-            "propertyOrder": 0, 
-            "type": "string", 
-            "title": "Identifier"
-          }, 
-          "name": {
-            "propertyOrder": 1, 
-            "type": "string", 
-            "title": "Name"
-          }, 
-          "clockImpl": {
-            "propertyOrder": 2, 
-            "enum": [
-              "At91Sam3uClock", 
-              "At91Sam3xClock", 
-              "AvrClock", 
-              "Mk20Clock"
-            ], 
-            "type": "string", 
-            "title": "Clock implementation"
-          }
-        }
-      }, 
-      "type": "array", 
-      "options": {
-        "collapsed": true
-      }, 
-      "propertyOrder": 1, 
-      "title": "Boards"
-    }, 
-    "configurations": {
-      "items": {
-        "properties": {
-          "_compoundName": {
-            "enum": [
-              "config"
-            ], 
-            "type": "string", 
-            "options": {
-              "hidden": true
-            }
-          }, 
-          "board_id": {
-            "watch": {
-              "watch_array": "boards"
-            }, 
-            "enumSource": [
-              {
-                "source": "watch_array", 
-                "value": "return vars.item[\"identifier\"];", 
-                "title": "return vars.item[\"name\"];"
-              }
-            ], 
-            "type": "string", 
-            "propertyOrder": 1, 
-            "title": "Board"
-          }, 
-          "fans": {
-            "items": {
-              "additionalProperties": false, 
-              "required": [
-                "_compoundName", 
-                "x", 
-                "y"
-              ], 
-              "type": "object", 
-              "properties": {
-                "_compoundName": {
-                  "enum": [
-                    "fan"
-                  ], 
-                  "type": "string", 
-                  "options": {
-                    "hidden": true
-                  }
-                }, 
-                "x": {
-                  "propertyOrder": 0, 
-                  "type": "integer", 
-                  "title": "X"
-                }, 
-                "y": {
-                  "propertyOrder": 1, 
-                  "type": "integer", 
-                  "title": "Y"
+            title: "Person",
+            type: "object",
+            properties: {
+                name: {
+                    type: "string",
+                    description: "First and Last name",
+                    minLength: 4,
+                    default: "Jeremy Dorn"
+                },
+                age: {
+                    type: "integer",
+                    default: 25,
+                    minimum: 18,
+                    maximum: 99
+                },
+                favorite_color: {
+                    type: "string",
+                    format: "color",
+                    title: "favorite color",
+                    default: "#ffa500"
+                },
+                gender: {
+                    type: "string",
+                    enum: ["male", "female"]
+                },
+                location: {
+                    type: "object",
+                    title: "Location",
+                    properties: {
+                        city: {
+                            type: "string",
+                            default: "San Francisco"
+                        },
+                        state: {
+                            type: "string",
+                            default: "CA"
+                        },
+                        citystate: {
+                            type: "string",
+                            description: "This is generated automatically from the previous two fields",
+                            template: "{{city}}, {{state}}",
+                            watch: {
+                                city: 'location.city',
+                                state: 'location.state'
+                            }
+                        }
+                    }
+                },
+                pets: {
+                    type: "array",
+                    format: "table",
+                    title: "Pets",
+                    uniqueItems: true,
+                    items: {
+                        type: "object",
+                        title: "Pet",
+                        properties: {
+                            type: {
+                                type: "string",
+                                enum: ["cat","dog","bird","reptile","other"],
+                                default: "dog"
+                            },
+                            name: {
+                                type: "string"
+                            }
+                        }
+                    },
+                    default: [
+                        {
+                            type: "dog",
+                            name: "Walter"
+                        }
+                    ]
                 }
-              }, 
-              "title": "Fan"
-            }, 
-            "type": "array", 
-            "propertyOrder": 2, 
-            "title": "Fans"
-          }, 
-          "name": {
-            "propertyOrder": 0, 
-            "type": "string", 
-            "title": "Name"
-          }, 
-          "board_data": {
-            "watch": {
-              "watch_array": "boards", 
-              "watch_id": "id_configuration.board_id"
-            }, 
-            "options": {
-              "derived": true
-            }, 
-            "template": "return aprinter_resolve_ref(vars.watch_array, \"identifier\", vars.watch_id);"
-          }
-        }, 
-        "title": "Configuration", 
-        "required": [
-          "_compoundName", 
-          "name", 
-          "board_id", 
-          "fans"
-        ], 
-        "id": "id_configuration", 
-        "additionalProperties": false, 
-        "type": "object", 
-        "options": {
-          "collapsed": true
+            }
         }
-      }, 
-      "type": "array", 
-      "propertyOrder": 0, 
-      "title": "Configurations"
-    }
-  }
-}
-
     }
 
     // Divs/textareas on the page
@@ -383,10 +273,7 @@ function aprinter_resolve_ref(target_arr, target_id_field, target_id) {
         if(jsoneditor) jsoneditor.destroy();
         jsoneditor = new JSONEditor($editor,{
             schema: schema,
-            startval: startval,
-            disable_edit_json: true,
-            disable_properties: true,
-            template: "javascript"
+            startval: startval
         });
 
         // When the value of the editor changes, update the JSON output and validation message
