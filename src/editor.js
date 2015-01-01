@@ -3,33 +3,28 @@
  */
 JSONEditor.AbstractEditor = Class.extend({
   onChildEditorChange: function(editor) {
-    this.onChange(true);
+    this.onChange();
   },
-  notify: function() {
-    this.jsoneditor.notifyWatchers(this.path);
+  isAnyParentProcessing: function() {
+    for (var editor = this; editor; editor = editor.parent) {
+      if (editor.processing_active) {
+        return true;
+      }
+    }
+    return false;
   },
-  change: function() {
-    if(this.parent) this.parent.onChildEditorChange(this);
-    else this.jsoneditor.onChange();
-  },
-  onChange: function(bubble, from_watch_listener) {
-    this.notify();
-    if(this.watch_listener && !from_watch_listener) this.watch_listener();
-    if(bubble) this.change();
-  },
-  onChangeFromWatchListener: function() {
-    this.onChange(true, true);
+  onChange: function() {
+    console.assert(this.processing_active, "onChange called outside of processing context??");
+    
+    this.processing_dirty = true;
   },
   register: function() {
     this.jsoneditor.registerEditor(this);
-    this.onChange();
+    //this.onChange();
   },
   unregister: function() {
     if(!this.jsoneditor) return;
     this.jsoneditor.unregisterEditor(this);
-  },
-  getNumColumns: function() {
-    return 12;
   },
   init: function(options) {
     this.jsoneditor = options.jsoneditor;
@@ -50,9 +45,16 @@ JSONEditor.AbstractEditor = Class.extend({
     this.key = this.path.split('.').pop();
     this.parent = options.parent;
     
+    this.processing_active = false;
+    this.processing_dirty = false;
+    this.processing_watch_dirty = false;
+    
     this.link_watchers = [];
     
     if(options.container) this.setContainer(options.container);
+  },
+  debugPrint: function(msg) {
+    console.log(this.path + ': ' + msg);
   },
   setContainer: function(container) {
     this.container = container;
@@ -60,22 +62,17 @@ JSONEditor.AbstractEditor = Class.extend({
     if(this.schema.type && typeof this.schema.type === "string") this.container.setAttribute('data-schematype',this.schema.type);
     this.container.setAttribute('data-schemapath',this.path);
   },
-  
-  preBuild: function() {
-
-  },
   build: function() {
-    
+    var self = this;
+    self.withProcessingContext(function() {
+      self.buildImpl();
+      self.setupWatchListeners();
+      self.addLinks();
+      self.updateHeaderText();
+      self.register();
+      self.onChange();
+    }, 'build');
   },
-  postBuild: function() {
-    this.setupWatchListeners();
-    this.addLinks();
-    this.setValue(this.getDefault(), true);
-    this.updateHeaderText();
-    this.register();
-    this.onWatchedFieldChange();
-  },
-  
   setupWatchListeners: function() {
     var self = this;
     
@@ -84,9 +81,9 @@ JSONEditor.AbstractEditor = Class.extend({
     if(this.schema.vars) this.schema.watch1 = this.schema.vars;
     this.watched_values = {};
     this.watch_listener = function() {
-      if(self.refreshWatchedFieldValues()) {
-        self.onWatchedFieldChange();
-      }
+      self.withProcessingContext(function() {
+        self.processing_watch_dirty = true;
+      }, 'watch_listener');
     };
     
     this.register();
@@ -284,8 +281,7 @@ JSONEditor.AbstractEditor = Class.extend({
       if(header_text !== this.header_text) {
         this.header_text = header_text;
         this.updateHeaderText();
-        this.notify();
-        //this.fireChangeHeaderEvent();
+        this.onChange();
       }
     }
     if(this.link_watchers.length) {
@@ -295,8 +291,59 @@ JSONEditor.AbstractEditor = Class.extend({
       }
     }
   },
+  withProcessingContext: function(func, name) {
+    var self = this;
+    console.assert(!self.processing_active, "already processing??");
+    
+    var tpro = !!self.jsoneditor.options.trace_processing;
+    if (tpro) {
+      if (typeof name === 'undefined') {
+        name = 'unknown_context';
+      }
+      self.debugPrint(name + ' ' + '{');
+    }
+    
+    self.processing_active = true;
+    self.processing_dirty = false;
+    self.processing_watch_dirty = false;
+    
+    func();
+    
+    if (self.processing_dirty || self.processing_watch_dirty) {
+      if (self.refreshWatchedFieldValues()) {
+        self.onWatchedFieldChange();
+      }
+    }
+    
+    self.processing_active = false;    
+    
+    if (tpro) {
+      self.debugPrint('}');
+    }
+    
+    if (self.processing_dirty) {
+      self.jsoneditor.notifyWatchers(self.path);
+      
+      if (!self.isAnyParentProcessing()) {
+        if (self.parent) {
+          self.parent.withProcessingContext(function() {
+            self.parent.onChildEditorChange(self);
+          }, 'child_editor_change');
+        } else {
+          self.jsoneditor.onChange();
+        }
+      }
+    }
+  },
   setValue: function(value) {
+    var self = this;
+    self.withProcessingContext(function() {
+      self.setValueImpl(value);
+    }, 'setValue');
+  },
+  setValueImpl: function(value) {
     this.value = value;
+    this.onChange();
   },
   getValue: function() {
     return this.value;
@@ -306,9 +353,6 @@ JSONEditor.AbstractEditor = Class.extend({
   },
   refreshValue: function() {
 
-  },
-  getChildEditors: function() {
-    return false;
   },
   destroy: function() {
     var self = this;

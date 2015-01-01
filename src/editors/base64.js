@@ -1,8 +1,5 @@
 JSONEditor.defaults.editors.base64 = JSONEditor.AbstractEditor.extend({
-  getNumColumns: function() {
-    return 4;
-  },
-  build: function() {    
+  buildImpl: function() {    
     var self = this;
     this.title = this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
 
@@ -24,10 +21,12 @@ JSONEditor.defaults.editors.base64 = JSONEditor.AbstractEditor.extend({
         if(this.files && this.files.length) {
           var fr = new FileReader();
           fr.onload = function(evt) {
-            self.value = evt.target.result;
-            self.refreshPreview();
-            self.onChange(true);
             fr = null;
+            self.withProcessingContext(function() {
+              self.value = evt.target.result;
+              self.refreshPreview();
+              self.onChange();
+            }, 'file_read');
           };
           fr.readAsDataURL(this.files[0]);
         }
@@ -74,7 +73,7 @@ JSONEditor.defaults.editors.base64 = JSONEditor.AbstractEditor.extend({
     if(this.uploader) this.uploader.disabled = true;
     this._super();
   },
-  setValue: function(val) {
+  setValueImpl: function(val) {
     if(this.value !== val) {
       this.value = val;
       this.input.value = this.value;

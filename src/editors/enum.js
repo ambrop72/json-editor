@@ -1,9 +1,6 @@
 // Enum Editor (used for objects and arrays with enumerated values)
 JSONEditor.defaults.editors.enum = JSONEditor.AbstractEditor.extend({
-  getNumColumns: function() {
-    return 4;
-  },
-  build: function() {
+  buildImpl: function() {
     var container = this.container;
     this.title = this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
     this.container.appendChild(this.title);
@@ -38,10 +35,12 @@ JSONEditor.defaults.editors.enum = JSONEditor.AbstractEditor.extend({
     if(this.options.hide_display) this.display_area.style.display = "none";
 
     this.switcher.addEventListener('change',function() {
-      self.selected = self.select_options.indexOf(this.value);
-      self.value = self.enum[self.selected];
-      self.refreshValue();
-      self.onChange(true);
+      self.withProcessingContext(function() {
+        self.selected = self.select_options.indexOf(self.switcher.value);
+        self.value = self.enum[self.selected];
+        self.refreshValue();
+        self.onChange();
+      }, 'enum_change');
     });
     this.value = this.enum[0];
     this.refreshValue();
@@ -60,8 +59,8 @@ JSONEditor.defaults.editors.enum = JSONEditor.AbstractEditor.extend({
     });
 
     if(self.selected<0) {
-      self.setValue(self.enum[0]);
-      return;
+      self.value = self.enum[0];
+      self.selected = 0;
     }
 
     this.switcher.value = this.select_options[this.selected];
@@ -117,7 +116,7 @@ JSONEditor.defaults.editors.enum = JSONEditor.AbstractEditor.extend({
       return el;
     }
   },
-  setValue: function(val) {
+  setValueImpl: function(val) {
     if(this.value !== val) {
       this.value = val;
       this.refreshValue();

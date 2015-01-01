@@ -1,7 +1,7 @@
 JSONEditor.defaults.editors.multiselect = JSONEditor.AbstractEditor.extend({
-  preBuild: function() {
-    this._super();
-
+  buildImpl: function() {
+    var self = this, i;
+    
     this.select_options = {};
     this.select_values = {};
 
@@ -16,9 +16,7 @@ JSONEditor.defaults.editors.multiselect = JSONEditor.AbstractEditor.extend({
       this.option_keys.push(e[i]+"");
       this.select_values[e[i]+""] = e[i];
     }
-  },
-  build: function() {
-    var self = this, i;
+    
     if(!this.options.compact) this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
     if(this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
 
@@ -64,11 +62,13 @@ JSONEditor.defaults.editors.multiselect = JSONEditor.AbstractEditor.extend({
         if(self.select_options[self.option_keys[i]].selected || self.select_options[self.option_keys[i]].checked) new_value.push(self.select_values[self.option_keys[i]]);
       }
 
-      self.updateValue(new_value);
-      self.onChange(true);
+      self.withProcessingContext(function() {
+        self.updateValue(new_value);
+        self.onChange();
+      }, 'changed');
     });
   },
-  setValue: function(value, initial) {
+  setValueImpl: function(value) {
     var i;
     value = value || [];
     if(typeof value !== "object") value = [value];
@@ -98,15 +98,6 @@ JSONEditor.defaults.editors.multiselect = JSONEditor.AbstractEditor.extend({
     this._super();
     if(!this.input) return;
     this.input.removeAttribute('name');
-  },
-  getNumColumns: function() {
-    var longest_text = this.getTitle().length;
-    for(var i in this.select_values) {
-      if(!this.select_values.hasOwnProperty(i)) continue;
-      longest_text = Math.max(longest_text,(this.select_values[i]+"").length+4);
-    }
-
-    return Math.min(12,Math.max(longest_text/7,2));
   },
   updateValue: function(value) {
     var changed = false;

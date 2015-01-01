@@ -1,5 +1,5 @@
 JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
-  setValue: function(value,initial) {
+  setValueImpl: function(value) {
     value = this.typecast(value||'');
 
     // Sanitize value before setting it
@@ -7,7 +7,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     if(this.enum_values.indexOf(sanitized) < 0) {
       sanitized = this.enum_values[0];
     }
-
+    
     if(this.value === sanitized) {
       return;
     }
@@ -15,6 +15,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     this.input.value = this.enum_options[this.enum_values.indexOf(sanitized)];
     if(this.select2) this.select2.select2('val',this.input.value);
     this.value = sanitized;
+    
     this.onChange();
   },
   register: function() {
@@ -26,14 +27,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     this._super();
     if(!this.input) return;
     this.input.removeAttribute('name');
-  },
-  getNumColumns: function() {
-    if(!this.enum_options) return 3;
-    var longest_text = this.getTitle().length;
-    for(var i=0; i<this.enum_options.length; i++) {
-      longest_text = Math.max(longest_text,this.enum_options[i].length+4);
-    }
-    return Math.min(12,Math.max(longest_text/7,2));
   },
   typecast: function(value) {
     if(this.schema.type === "boolean") {
@@ -52,7 +45,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
   getValue: function() {
     return this.value;
   },
-  preBuild: function() {
+  buildImpl: function() {
     var self = this;
     this.input_type = 'select';
     this.enum_options = [];
@@ -139,9 +132,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     else {
       throw "'select' editor requires the enum property to be set.";
     }
-  },
-  build: function() {
-    var self = this;
+    
     if(!this.options.compact) this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
     if(this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
 
@@ -165,18 +156,24 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     this.container.appendChild(this.control);
 
     this.value = this.enum_values[0];
+    
+    this.theme.afterInputReady(this.input);
+    this.setupSelect2();
   },
   onInputChange: function() {
-    var val = this.input.value;
+    var self = this;
+    self.withProcessingContext(function() {
+      var val = self.input.value;
 
-    var sanitized = val;
-    if(this.enum_options.indexOf(val) === -1) {
-      sanitized = this.enum_options[0];
-    }
+      var sanitized = val;
+      if(self.enum_options.indexOf(val) === -1) {
+        sanitized = self.enum_options[0];
+      }
 
-    this.value = this.enum_values[this.enum_options.indexOf(val)];
+      self.value = self.enum_values[self.enum_options.indexOf(val)];
 
-    this.onChange(true);
+      self.onChange();
+    }, 'input_change');
   },
   setupSelect2: function() {
     // If the Select2 library is loaded use it when we have lots of items
@@ -193,11 +190,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     else {
       this.select2 = null;
     }
-  },
-  postBuild: function() {
-    this._super();
-    this.theme.afterInputReady(this.input);
-    this.setupSelect2();
   },
   onWatchedFieldChange: function() {
     var self = this, vars, j;
@@ -294,10 +286,8 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       // Otherwise, set the value to the first select option
       else {
         this.input.value = select_options[0];
-        this.value = select_options[0] || "";  
-        if(this.parent) this.parent.onChildEditorChange(this);
-        else this.jsoneditor.onChange();
-        this.jsoneditor.notifyWatchers(this.path);
+        this.value = select_options[0] || "";
+        this.onChange();
       }
       
       this.setupSelect2();

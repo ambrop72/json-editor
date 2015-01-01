@@ -9,19 +9,19 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     if(!this.input) return;
     this.input.removeAttribute('name');
   },
-  setValue: function(value,initial,from_template) {
-    var self = this;
-    
-    if(this.template && !from_template) {
+  setValueImpl: function(value) {
+    if (this.template) {
       return;
     }
+    this.mySetValue(value, false);
+  },
+  mySetValue: function(value) {
+    var self = this;
     
     if(value === null) value = "";
     else if(typeof value === "object") value = JSON.stringify(value);
     else if(typeof value !== "string") value = ""+value;
     
-    if(value === this.serialized) return;
-
     // Sanitize value before setting it
     var sanitized = this.sanitize(value);
 
@@ -42,28 +42,19 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
       this.ace_editor.setValue(sanitized);
     }
     
-    var changed = from_template || this.getValue() !== value;
-    
     this.refreshValue();
     
-    if(initial) this.is_dirty = false;
+    if(this.initial) this.is_dirty = false;
     else if(this.jsoneditor.options.show_errors === "change") this.is_dirty = true;
+    this.initial = false;
 
-    // Bubble this setValue to parents if the value changed
-    this.onChange(changed);
+    this.onChange();
   },
-  getNumColumns: function() {
-    var min = Math.ceil(Math.max(this.getTitle().length,this.schema.maxLength||0,this.schema.minLength||0)/5);
-    var num;
-    
-    if(this.input_type === 'textarea') num = 6;
-    else if(['text','email'].indexOf(this.input_type) >= 0) num = 4;
-    else num = 2;
-    
-    return Math.min(12,Math.max(min,num));
-  },
-  build: function() {
+  buildImpl: function() {
     var self = this, i;
+    
+    this.initial = true;
+    
     if(!this.options.compact) this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
     if(this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
 
@@ -200,10 +191,11 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
           this.value = sanitized;
         }
         
-        self.is_dirty = true;
-
-        self.refreshValue();
-        self.onChange(true);
+        self.withProcessingContext(function() {
+          self.is_dirty = true;
+          self.refreshValue();
+          self.onChange();
+        }, 'input_change');
       });
 
     if(this.format) this.input.setAttribute('data-schemaformat',this.format);
@@ -222,11 +214,9 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     // Compile and store the template
     if(this.schema.template) {
       this.template = this.jsoneditor.compileTemplate(this.schema.template, this.template_engine);
-      this.refreshValue();
     }
-    else {
-      this.refreshValue();
-    }
+    
+    this.refreshValue();
   },
   enable: function() {
     if(!this.always_disabled) {
@@ -268,9 +258,12 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
           window.jQuery('#sceditor-start-marker,#sceditor-end-marker,.sceditor-nlf',val).remove();
           // Set the value and update
           self.input.value = val.html();
-          self.value = self.input.value;
-          self.is_dirty = true;
-          self.onChange(true);
+          
+          self.withProcessingContext(function() {
+            self.value = self.input.value;
+            self.is_dirty = true;
+            self.onChange();
+          }, 'input_change');
         });
       }
       // EpicEditor for markdown (if it's loaded)
@@ -293,7 +286,7 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
           self.input.value = val;
           self.value = val;
           self.is_dirty = true;
-          self.onChange(true);
+          self.onChange();
         });
       }
       // ACE editor for everything else
@@ -324,9 +317,11 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
         this.ace_editor.on('change',function() {
           var val = self.ace_editor.getValue();
           self.input.value = val;
-          self.refreshValue();
-          self.is_dirty = true;
-          self.onChange(true);
+          self.withProcessingContext(function() {
+            self.refreshValue();
+            self.is_dirty = true;
+            self.onChange();
+          }, 'input_change');
         });
       }
     }
@@ -336,7 +331,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
   refreshValue: function() {
     this.value = this.input.value;
     if(typeof this.value !== "string") this.value = '';
-    this.serialized = this.value;
   },
   destroy: function() {
     // If using SCEditor, destroy the editor instance
@@ -373,7 +367,7 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     // If this editor needs to be rendered by a macro template
     if(this.template) {
       vars = this.getWatchedFieldValues();
-      this.setValue(this.template(vars),false,true);
+      this.mySetValue(this.template(vars), false);
     }
     
     this._super();

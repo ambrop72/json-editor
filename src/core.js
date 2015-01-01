@@ -42,9 +42,7 @@ JSONEditor.prototype = {
         container: self.root_container
       });
       
-      self.root.preBuild();
       self.root.build();
-      self.root.postBuild();
 
       // Starting data
       if(self.options.startval) self.root.setValue(self.options.startval);
@@ -63,11 +61,6 @@ JSONEditor.prototype = {
     });
   },
   getValue: function() {
-    if(!this.ready) throw "JSON Editor not ready yet.  Listen for 'ready' event before getting the value";
-
-    return this.root.getValue();
-  },
-  getFinalValue: function() {
     if(!this.ready) throw "JSON Editor not ready yet.  Listen for 'ready' event before getting the value";
 
     return this.root.getFinalValue();

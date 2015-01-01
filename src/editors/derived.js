@@ -1,5 +1,5 @@
 JSONEditor.defaults.editors.derived = JSONEditor.AbstractEditor.extend({
-    build: function() {
+    buildImpl: function() {
         this.always_disabled = true;
         if (!this.schema.template) {
             throw "'derived' editor requires the template property to be set.";
@@ -15,12 +15,12 @@ JSONEditor.defaults.editors.derived = JSONEditor.AbstractEditor.extend({
     getValue: function() {
         return this.myValue;
     },
-    setValue: function(val, initial) {
+    setValueImpl: function(val) {
     },
     onWatchedFieldChange: function() {    
         var vars = this.getWatchedFieldValues();
         this.myValue = this.template(vars);
-        this.onChangeFromWatchListener();
+        this.onChange();
         this._super();
     }
 });

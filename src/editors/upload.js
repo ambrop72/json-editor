@@ -1,8 +1,5 @@
 JSONEditor.defaults.editors.upload = JSONEditor.AbstractEditor.extend({
-  getNumColumns: function() {
-    return 4;
-  },
-  build: function() {    
+  buildImpl: function() {    
     var self = this;
     this.title = this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
 
@@ -25,10 +22,12 @@ JSONEditor.defaults.editors.upload = JSONEditor.AbstractEditor.extend({
         if(this.files && this.files.length) {
           var fr = new FileReader();
           fr.onload = function(evt) {
-            self.preview_value = evt.target.result;
-            self.refreshPreview();
-            self.onChange(true);
             fr = null;
+            self.withProcessingContext(function() {
+              self.preview_value = evt.target.result;
+              self.refreshPreview();
+              self.onChange();
+            }, 'file_uploaded');
           };
           fr.readAsDataURL(this.files[0]);
         }
@@ -86,13 +85,13 @@ JSONEditor.defaults.editors.upload = JSONEditor.AbstractEditor.extend({
 
       self.jsoneditor.options.upload(self.path, file, {
         success: function(url) {
-          self.setValue(url);
-
-          if(self.parent) self.parent.onChildEditorChange(self);
-          else self.jsoneditor.onChange();
-
           if (self.progressBar) self.preview.removeChild(self.progressBar);
           uploadButton.removeAttribute("disabled");
+          
+          self.withProcessingContext(function() {
+            self.setValue(url);
+            self.onChange();
+          }, 'file_uploaded');
         },
         failure: function(error) {
           self.theme.addInputError(self.uploader, error);
@@ -116,7 +115,7 @@ JSONEditor.defaults.editors.upload = JSONEditor.AbstractEditor.extend({
     if(this.uploader) this.uploader.disabled = true;
     this._super();
   },
-  setValue: function(val) {
+  setValueImpl: function(val) {
     if(this.value !== val) {
       this.value = val;
       this.input.value = this.value;
