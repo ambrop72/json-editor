@@ -2,24 +2,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   getDefault: function() {
     return $extend({},this.schema.default || {});
   },
-  register: function() {
-    this._super();
-    if(this.editors) {
-      for(var i in this.editors) {
-        if(!this.editors.hasOwnProperty(i)) continue;
-        this.editors[i].register();
-      }
-    }
-  },
-  unregister: function() {
-    this._super();
-    if(this.editors) {
-      for(var i in this.editors) {
-        if(!this.editors.hasOwnProperty(i)) continue;
-        this.editors[i].unregister();
-      }
-    }
-  },
   enable: function() {
     if(this.editjson_button) this.editjson_button.disabled = false;
     if(this.addproperty_button) this.addproperty_button.disabled = false;
@@ -87,7 +69,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   },
   buildImpl: function() {
     this.editors = {};
-    this.cached_editors = {};
     var self = this;
 
     this.schema.properties = this.schema.properties || {};
@@ -390,7 +371,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   },
   removeObjectProperty: function(property) {
     if(this.editors[property]) {
-      this.editors[property].unregister();
+      this.editors[property].destroy();
       delete this.editors[property];
       
       this.refreshValue();
@@ -403,44 +384,35 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     // Property is already added
     if(this.editors[name]) return;
     
-    // Property was added before and is cached
-    if(this.cached_editors[name]) {
-      this.editors[name] = this.cached_editors[name];
-      this.editors[name].register();
+    if(!this.canHaveAdditionalProperties() && (!this.schema.properties || !this.schema.properties[name])) {
+      return;
     }
-    // New property
-    else {
-      if(!this.canHaveAdditionalProperties() && (!this.schema.properties || !this.schema.properties[name])) {
-        return;
-      }
 
-      var holder;
-      var extra_opts = {};
-      if (self.options.table_row) {
-        holder = self.theme.getTableCell();
-        extra_opts.compact = true;
-        extra_opts.required = true;
-      } else {
-        holder = self.theme.getChildEditorHolder();
-      }
-      
-      var schema = self.getPropertySchema(name);
-      var editor = self.jsoneditor.getEditorClass(schema);
-      self.editor_holder.appendChild(holder);
-      self.editors[name] = self.jsoneditor.createEditor(editor, $extend({
-        jsoneditor: self.jsoneditor,
-        schema: schema,
-        path: self.path+'.'+name,
-        parent: self,
-        container: holder
-      }, extra_opts));
-      self.cached_editors[name] = self.editors[name];
-      self.editors[name].build();
-      
-      if (self.options.table_row) {
-        if (self.editors[name].options.hidden) {
-          holder.style.display = 'none';
-        }
+    var holder;
+    var extra_opts = {};
+    if (self.options.table_row) {
+      holder = self.theme.getTableCell();
+      extra_opts.compact = true;
+      extra_opts.required = true;
+    } else {
+      holder = self.theme.getChildEditorHolder();
+    }
+    
+    var schema = self.getPropertySchema(name);
+    var editor = self.jsoneditor.getEditorClass(schema);
+    self.editor_holder.appendChild(holder);
+    self.editors[name] = self.jsoneditor.createEditor(editor, $extend({
+      jsoneditor: self.jsoneditor,
+      schema: schema,
+      path: self.path+'.'+name,
+      parent: self,
+      container: holder
+    }, extra_opts));
+    self.editors[name].build();
+    
+    if (self.options.table_row) {
+      if (self.editors[name].options.hidden) {
+        holder.style.display = 'none';
       }
     }
   },
@@ -452,7 +424,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     return this.schema.additionalProperties !== false && !this.jsoneditor.options.no_additional_properties;
   },
   destroy: function() {
-    $each(this.cached_editors, function(i,el) {
+    $each(this.editors, function(i,el) {
       el.destroy();
     });
     if(this.editor_holder) this.editor_holder.innerHTML = '';
@@ -460,7 +432,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     if(this.error_holder && this.error_holder.parentNode) this.error_holder.parentNode.removeChild(this.error_holder);
 
     this.editors = null;
-    this.cached_editors = null;
     if(this.editor_holder && this.editor_holder.parentNode) this.editor_holder.parentNode.removeChild(this.editor_holder);
     this.editor_holder = null;
 
@@ -523,12 +494,12 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     this.addproperty_checkboxes = {};
     
     // Check for which editors can't be removed or added back
-    for(i in this.cached_editors) {
-      if(!this.cached_editors.hasOwnProperty(i)) continue;
+    for(i in this.editors) {
+      if(!this.editors.hasOwnProperty(i)) continue;
       
       this.addPropertyCheckbox(i);
       
-      if(this.isRequired(this.cached_editors[i]) && i in this.editors) {
+      if(this.isRequired(this.editors[i])) {
         this.addproperty_checkboxes[i].disabled = true;
       }
       
@@ -558,7 +529,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     // Additional addproperty checkboxes not tied to a current editor
     for(i in this.schema.properties) {
       if(!this.schema.properties.hasOwnProperty(i)) continue;
-      if(this.cached_editors[i]) continue;
+      if(this.editors[i]) continue;
       show_modal = true;
       this.addPropertyCheckbox(i);
       this.addproperty_checkboxes[i].disabled = !can_add;
@@ -602,7 +573,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     var setActions = [];
 
     // First, set the values for all of the defined properties
-    $each(this.cached_editors, function(i,editor) {
+    $each(this.editors, function(i,editor) {
       // Value explicitly set
       if(typeof value[i] !== "undefined") {
         setActions.push({name: i, value: value[i]});
@@ -619,7 +590,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
 
     // Also try to set properties for which we don't have editors.
     $each(value, function(i,val) {
-      if(!self.cached_editors.hasOwnProperty(i)) {
+      if(!self.editors.hasOwnProperty(i)) {
         setActions.push({name: i, value: val});
       }
     });
@@ -627,7 +598,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     // For the initial value, we need to make sure we actually have the editors.
     if (initial) {
       $each(self.schema.properties, function(i, schema) {
-        if (!self.cached_editors.hasOwnProperty(i) && !value.hasOwnProperty(i)) {
+        if (!self.editors.hasOwnProperty(i) && !value.hasOwnProperty(i)) {
           setActions.push({name: i});
         }
       });

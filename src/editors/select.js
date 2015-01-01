@@ -18,16 +18,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     
     this.onChange();
   },
-  register: function() {
-    this._super();
-    if(!this.input) return;
-    this.input.setAttribute('name',this.formname);
-  },
-  unregister: function() {
-    this._super();
-    if(!this.input) return;
-    this.input.removeAttribute('name');
-  },
   typecast: function(value) {
     if(this.schema.type === "boolean") {
       return !!value;
@@ -140,6 +130,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
 
     this.input = this.theme.getSelectInput(this.enum_options);
     this.theme.setSelectOptions(this.input,this.enum_options,this.enum_display);
+    this.input.setAttribute('name',this.formname);
 
     if(this.schema.readOnly || this.schema.readonly) {
       this.always_disabled = true;

@@ -197,7 +197,7 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     this.serialized = JSON.stringify(this.value);
   },
   addRow: function(value) {
-    this.addRowBase(value, false, false, function(row) { return row.table_controls; });
+    this.addRowBase(value, false, function(row) { return row.table_controls; });
   },
   addRowButtonHandler: function() {
     var self = this;

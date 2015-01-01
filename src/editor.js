@@ -18,14 +18,6 @@ JSONEditor.AbstractEditor = Class.extend({
     
     this.processing_dirty = true;
   },
-  register: function() {
-    this.jsoneditor.registerEditor(this);
-    //this.onChange();
-  },
-  unregister: function() {
-    if(!this.jsoneditor) return;
-    this.jsoneditor.unregisterEditor(this);
-  },
   init: function(options) {
     this.jsoneditor = options.jsoneditor;
     
@@ -51,7 +43,9 @@ JSONEditor.AbstractEditor = Class.extend({
     
     this.link_watchers = [];
     
-    if(options.container) this.setContainer(options.container);
+    if (options.container) {
+      this.setContainer(options.container);
+    }
   },
   debugPrint: function(msg) {
     console.log(this.path + ': ' + msg);
@@ -66,10 +60,10 @@ JSONEditor.AbstractEditor = Class.extend({
     var self = this;
     self.withProcessingContext(function() {
       self.buildImpl();
+      self.jsoneditor.registerEditor(self);
       self.setupWatchListeners();
       self.addLinks();
       self.updateHeaderText();
-      self.register();
       self.onChange();
     }, 'build');
   },
@@ -86,7 +80,6 @@ JSONEditor.AbstractEditor = Class.extend({
       }, 'watch_listener');
     };
     
-    this.register();
     if(this.schema.watch1) {
       var path,path_parts,first,root,adjusted_path;
 
@@ -356,10 +349,10 @@ JSONEditor.AbstractEditor = Class.extend({
   },
   destroy: function() {
     var self = this;
-    this.unregister(this);
     $each(this.watched,function(name,adjusted_path) {
       self.jsoneditor.doUnwatch(adjusted_path,self.watch_listener);
     });
+    this.jsoneditor.unregisterEditor(this);
     this.watched = null;
     this.watched_values = null;
     this.watch_listener = null;

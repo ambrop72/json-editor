@@ -1,65 +1,33 @@
 // Multiple Editor (for when `type` is an array)
 JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
-  register: function() {
-    if(this.editors) {
-      for(var i=0; i<this.editors.length; i++) {
-        if(!this.editors[i]) continue;
-        this.editors[i].unregister();
-      }
-      if(this.editors[this.type]) this.editors[this.type].register();
-    }
-    this._super();
-  },
-  unregister: function() {
-    this._super();
-    if(this.editors) {
-      for(var i=0; i<this.editors.length; i++) {
-        if(!this.editors[i]) continue;
-        this.editors[i].unregister();
-      }
-    }
-  },
   enable: function() {
-    if(this.editors) {
-      for(var i=0; i<this.editors.length; i++) {
-        if(!this.editors[i]) continue;
-        this.editors[i].enable();
-      }
-    }
+    this.editor.enable();
     this.switcher.disabled = false;
     this._super();
   },
   disable: function() {
-    if(this.editors) {
-      for(var i=0; i<this.editors.length; i++) {
-        if(!this.editors[i]) continue;
-        this.editors[i].disable();
-      }
-    }
+    this.editor.disable();
     this.switcher.disabled = true;
     this._super();
   },
   switchEditor: function(i) {
     var self = this;
     
-    if(!this.editors[i]) {
-      this.buildChildEditor(i);
+    if (self.editor && self.type !== i) {
+      self.editor.destroy();
+      self.editor = null;
+    }
+    
+    if (!self.editor) {
+      self.buildChildEditor(i);
     }
     
     self.type = i;
 
-    self.register();
-
-    var current_value = self.getValue();
-
-    $each(self.editors,function(type,editor) {
-      if(!editor) return;
-      if(self.type === type) {
-        editor.setValue(current_value);
-        editor.container.style.display = '';
-      }
-      else editor.container.style.display = 'none';
-    });
+    self.editor.setValue(self.value);
+    
+    self.editor.container.style.display = '';
+    
     self.refreshValue();
     self.refreshHeaderText();
   },
@@ -85,9 +53,9 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
       }
     }
 
-    var editor = self.jsoneditor.getEditorClass(schema);
+    var editor_class = self.jsoneditor.getEditorClass(schema);
 
-    self.editors[i] = self.jsoneditor.createEditor(editor,{
+    self.editor = self.jsoneditor.createEditor(editor_class,{
       jsoneditor: self.jsoneditor,
       schema: schema,
       container: holder,
@@ -95,25 +63,24 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
       parent: self,
       required: true
     });
-    self.editors[i].build();
+    self.editor.build();
     
-    if(self.editors[i].header) self.editors[i].header.style.display = 'none';
+    if(self.editor.header) self.editor.header.style.display = 'none';
     
-    self.editors[i].option = self.switcher_options[i];
+    self.editor.option = self.switcher_options[i];
     
     holder.addEventListener('change_header_text',function() {
       self.refreshHeaderText();
     });
-
-    if(i !== self.type) holder.style.display = 'none';
   },
   buildImpl: function() {
     var self = this;
 
     this.types = [];
     this.type = 0;
-    this.editors = [];
+    this.editor = null;
     this.validators = [];
+    this.value = null;
 
     if(this.schema.oneOf) {
       this.oneOf = true;
@@ -177,8 +144,6 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
 
     this.switcher_options = this.theme.getSwitcherOptions(this.switcher);
     $each(this.types,function(i,type) {
-      self.editors[i] = false;
-      
       var schema;
       
       if(typeof type === "string") {
@@ -200,10 +165,8 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
     this.switchEditor(0);
   },
   onChildEditorChange: function(editor) {
-    if(this.editors[this.type]) {
-      this.refreshValue();
-      this.refreshHeaderText();
-    }
+    this.refreshValue();
+    this.refreshHeaderText();
     this.onChange();
   },
   refreshHeaderText: function() {
@@ -213,30 +176,31 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
     });
   },
   refreshValue: function() {
-    this.value = this.editors[this.type].getValue();
+    this.value = this.editor.getValue();
   },
   setValueImpl: function(val) {
-    // Determine type by getting the first one that validates
     var self = this;
+    
+    // Determine type by getting the first one that validates
+    var type = 0;
     $each(this.validators, function(i,validator) {
       if(!validator.validate(val).length) {
-        self.type = i;
-        self.switcher.value = self.display_text[i];
+        type = i;
         return false;
       }
     });
     
-    this.switchEditor(this.type);
+    self.switcher.value = self.display_text[type];
+    
+    this.value = val;
+    this.switchEditor(type);
 
-    this.editors[this.type].setValue(val);
-
-    this.refreshValue();
     self.onChange();
   },
   destroy: function() {
-    $each(this.editors, function(type,editor) {
-      if(editor) editor.destroy();
-    });
+    if (this.editor) {
+      this.editor.destroy();
+    }
     if(this.editor_holder && this.editor_holder.parentNode) this.editor_holder.parentNode.removeChild(this.editor_holder);
     if(this.switcher && this.switcher.parentNode) this.switcher.parentNode.removeChild(this.switcher);
     this._super();
@@ -244,28 +208,20 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
   showValidationErrors: function(errors) {
     var self = this;
     
-    // oneOf error paths need to remove the oneOf[i] part before passing to child editors
-    if(this.oneOf) {
-      $each(this.editors,function(i,editor) {
-        if(!editor) return;
-        var check = self.path+'.oneOf['+i+']';
-        var new_errors = [];
-        $each(errors, function(j,error) {
-          if(error.path.substr(0,check.length)===check) {
-            var new_error = $extend({},error);
-            new_error.path = self.path+new_error.path.substr(check.length);
-            new_errors.push(new_error);
-          }
-        });
-        
-        editor.showValidationErrors(new_errors);
+    // oneOf error paths need to remove the oneOf[i] part before passing to child editor
+    var new_errors = errors;
+    if (this.oneOf) {
+      var check = self.path+'.oneOf['+this.type+']';
+      new_errors = [];
+      $each(errors, function(j,error) {
+        if(error.path.substr(0,check.length)===check) {
+          var new_error = $extend({},error);
+          new_error.path = self.path+new_error.path.substr(check.length);
+          new_errors.push(new_error);
+        }
       });
     }
-    else {
-      $each(this.editors,function(type,editor) {
-        if(!editor) return;
-        editor.showValidationErrors(errors);
-      });
-    }
+    
+    this.editor.showValidationErrors(new_errors);
   }
 });

@@ -1,14 +1,4 @@
 JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
-  register: function() {
-    this._super();
-    if(!this.input) return;
-    this.input.setAttribute('name',this.formname);
-  },
-  unregister: function() {
-    this._super();
-    if(!this.input) return;
-    this.input.removeAttribute('name');
-  },
   setValueImpl: function(value) {
     if (this.template) {
       return;
@@ -159,6 +149,8 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
       this.input_type = 'text';
       this.input = this.theme.getFormInputField(this.input_type);
     }
+    
+    this.input.setAttribute('name',this.formname);
     
     // minLength, maxLength, and pattern
     if(typeof this.schema.maxLength !== "undefined") this.input.setAttribute('maxlength',this.schema.maxLength);

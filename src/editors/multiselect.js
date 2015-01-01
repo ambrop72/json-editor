@@ -39,6 +39,7 @@ JSONEditor.defaults.editors.multiselect = JSONEditor.AbstractEditor.extend({
       this.input = this.theme.getSelectInput(this.option_keys);
       this.input.multiple = true;
       this.input.size = Math.min(10,this.option_keys.length);
+      this.input.setAttribute('name',this.formname);
 
       for(i=0; i<this.option_keys.length; i++) {
         this.select_options[this.option_keys[i]] = this.input.children[i];
@@ -88,16 +89,6 @@ JSONEditor.defaults.editors.multiselect = JSONEditor.AbstractEditor.extend({
 
     this.updateValue(value);
     this.onChange();
-  },
-  register: function() {
-    this._super();
-    if(!this.input) return;
-    this.input.setAttribute('name',this.formname);
-  },
-  unregister: function() {
-    this._super();
-    if(!this.input) return;
-    this.input.removeAttribute('name');
   },
   updateValue: function(value) {
     var changed = false;
