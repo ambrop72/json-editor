@@ -67,25 +67,6 @@ JSONEditor.AbstractTheme = Class.extend({
     el.style.width = 'auto';
     return el;
   },
-  getMultiCheckboxHolder: function(controls,label,description) {
-    var el = document.createElement('div');
-
-    if(label) {
-      label.style.display = 'block';
-      el.appendChild(label);
-    }
-
-    for(var i in controls) {
-      if(!controls.hasOwnProperty(i)) continue;
-      controls[i].style.display = 'inline-block';
-      controls[i].style.marginRight = '20px';
-      el.appendChild(controls[i]);
-    }
-
-    if(description) el.appendChild(description);
-
-    return el;
-  },
   getSelectInput: function(options) {
     var select = document.createElement('select');
     if(options) this.setSelectOptions(select, options);
