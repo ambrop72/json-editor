@@ -13,7 +13,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     }
 
     this.input.value = this.enum_options[this.enum_values.indexOf(sanitized)];
-    if(this.select2) this.select2.select2('val',this.input.value);
     this.value = sanitized;
     
     this.onChange();
@@ -149,7 +148,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     this.value = this.enum_values[0];
     
     this.theme.afterInputReady(this.input);
-    this.setupSelect2();
   },
   onInputChange: function() {
     var self = this;
@@ -165,22 +163,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
 
       self.onChange();
     }, 'input_change');
-  },
-  setupSelect2: function() {
-    // If the Select2 library is loaded use it when we have lots of items
-    if(window.jQuery && window.jQuery.fn && window.jQuery.fn.select2 && (this.enum_options.length > 2 || (this.enum_options.length && this.enumSource))) {
-      var options = $extend({},JSONEditor.plugins.select2);
-      if(this.schema.options && this.schema.options.select2_options) options = $extend(options,this.schema.options.select2_options);
-      this.select2 = window.jQuery(this.input).select2(options);
-      var self = this;
-      this.select2.on('select2-blur',function() {
-        self.input.value = self.select2.select2('val');
-        self.onInputChange();
-      });
-    }
-    else {
-      this.select2 = null;
-    }
   },
   onWatchedFieldChange: function() {
     var self = this, vars, j;
@@ -265,10 +247,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       this.enum_display = select_titles;
       this.enum_values = select_options;
       
-      if(this.select2) {
-        this.select2.select2('destroy');
-      }
-      
       // If the previous value is still in the new select options, stick with it
       if(select_options.indexOf(prev_value) !== -1) {
         this.input.value = prev_value;
@@ -280,8 +258,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
         this.value = select_options[0] || "";
         this.onChange();
       }
-      
-      this.setupSelect2();
     }
 
     this._super();
@@ -289,23 +265,17 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
   enable: function() {
     if(!this.always_disabled) {
       this.input.disabled = false;
-      if(this.select2) this.select2.select2("enable",true);
     }
     this._super();
   },
   disable: function() {
     this.input.disabled = true;
-    if(this.select2) this.select2.select2("enable",false);
     this._super();
   },
   destroy: function() {
     if(this.label && this.label.parentNode) this.label.parentNode.removeChild(this.label);
     if(this.description && this.description.parentNode) this.description.parentNode.removeChild(this.description);
     if(this.input && this.input.parentNode) this.input.parentNode.removeChild(this.input);
-    if(this.select2) {
-      this.select2.select2('destroy');
-      this.select2 = null;
-    }
 
     this._super();
   }
