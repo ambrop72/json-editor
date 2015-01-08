@@ -45,9 +45,6 @@ module.exports = function(grunt) {
           // Set the defaults
           'src/defaults.js',
           
-          // Wrapper for $.fn style initialization
-          'src/jquery.js',
-          
           // End the closure
           'src/outro.js'
         ],
@@ -106,10 +103,7 @@ module.exports = function(grunt) {
         'src/templates/*.js',
 
         // Set the defaults
-        'src/defaults.js',
-        
-        // Wrapper for $.fn style initialization
-        'src/jquery.js'
+        'src/defaults.js'
       ],
       afterconcat: {
         options: {
