@@ -366,16 +366,6 @@ JSONEditor.AbstractEditor = Class.extend({
     
     return disp;
   },
-  getOption: function(key) {
-    try {
-      throw "getOption is deprecated";
-    }
-    catch(e) {
-      window.console.error(e);
-    }
-    
-    return this.options[key];
-  },
   showValidationErrors: function(errors) {
 
   }
