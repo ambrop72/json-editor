@@ -121,8 +121,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
         }, 'input_change');
       });
 
-    if(this.format) this.input.setAttribute('data-schemaformat',this.format);
-
     this.control = this.theme.getFormControl(this.label, this.input, this.description);
     this.container.appendChild(this.control);
 
