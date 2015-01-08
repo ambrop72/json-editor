@@ -21,17 +21,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
 
     this.input.value = sanitized;
     
-    // If using SCEditor, update the WYSIWYG
-    if(this.sceditor_instance) {
-      this.sceditor_instance.val(sanitized);
-    }
-    else if(this.epiceditor) {
-      this.epiceditor.importFile(null,sanitized);
-    }
-    else if(this.ace_editor) {
-      this.ace_editor.setValue(sanitized);
-    }
-    
     this.refreshValue();
     
     if(this.initial) this.is_dirty = false;
@@ -79,64 +68,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
         }
 
         this.input = this.theme.getRangeInput(min,max,step);
-      }
-      // Source Code
-      else if([
-          'actionscript',
-          'batchfile',
-          'bbcode',
-          'c',
-          'c++',
-          'cpp',
-          'coffee',
-          'csharp',
-          'css',
-          'dart',
-          'django',
-          'ejs',
-          'erlang',
-          'golang',
-          'handlebars',
-          'haskell',
-          'haxe',
-          'html',
-          'ini',
-          'jade',
-          'java',
-          'javascript',
-          'json',
-          'less',
-          'lisp',
-          'lua',
-          'makefile',
-          'markdown',
-          'matlab',
-          'mysql',
-          'objectivec',
-          'pascal',
-          'perl',
-          'pgsql',
-          'php',
-          'python',
-          'r',
-          'ruby',
-          'sass',
-          'scala',
-          'scss',
-          'smarty',
-          'sql',
-          'stylus',
-          'svg',
-          'twig',
-          'vbscript',
-          'xml',
-          'yaml'
-        ].indexOf(this.format) >= 0
-      ) {
-        this.input_type = this.format;
-        this.source_code = true;
-        
-        this.input = this.theme.getTextareaInput();
       }
       // HTML5 Input type
       else {
@@ -213,111 +144,15 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
   enable: function() {
     if(!this.always_disabled) {
       this.input.disabled = false;
-      // TODO: WYSIWYG and Markdown editors
     }
     this._super();
   },
   disable: function() {
     this.input.disabled = true;
-    // TODO: WYSIWYG and Markdown editors
     this._super();
   },
   afterInputReady: function() {
-    var self = this, options;
-    
-    // Code editor
-    if(this.source_code) {      
-      // WYSIWYG html and bbcode editor
-      if(this.options.wysiwyg && 
-        ['html','bbcode'].indexOf(this.input_type) >= 0 && 
-        window.jQuery && window.jQuery.fn && window.jQuery.fn.sceditor
-      ) {
-        options = $extend({},{
-          plugins: self.input_type==='html'? 'xhtml' : 'bbcode',
-          emoticonsEnabled: false,
-          width: '100%',
-          height: 300
-        },JSONEditor.plugins.sceditor,self.options.sceditor_options||{});
-        
-        window.jQuery(self.input).sceditor(options);
-        
-        self.sceditor_instance = window.jQuery(self.input).sceditor('instance');
-        
-        self.sceditor_instance.blur(function() {
-          // Get editor's value
-          var val = window.jQuery("<div>"+self.sceditor_instance.val()+"</div>");
-          // Remove sceditor spans/divs
-          window.jQuery('#sceditor-start-marker,#sceditor-end-marker,.sceditor-nlf',val).remove();
-          // Set the value and update
-          self.input.value = val.html();
-          
-          self.withProcessingContext(function() {
-            self.value = self.input.value;
-            self.is_dirty = true;
-            self.onChange();
-          }, 'input_change');
-        });
-      }
-      // EpicEditor for markdown (if it's loaded)
-      else if (this.input_type === 'markdown' && window.EpicEditor) {
-        this.epiceditor_container = document.createElement('div');
-        this.input.parentNode.insertBefore(this.epiceditor_container,this.input);
-        this.input.style.display = 'none';
-        
-        options = $extend({},JSONEditor.plugins.epiceditor,{
-          container: this.epiceditor_container,
-          clientSideStorage: false
-        });
-        
-        this.epiceditor = new window.EpicEditor(options).load();
-        
-        this.epiceditor.importFile(null,this.getValue());
-      
-        this.epiceditor.on('update',function() {
-          var val = self.epiceditor.exportFile();
-          self.input.value = val;
-          self.value = val;
-          self.is_dirty = true;
-          self.onChange();
-        });
-      }
-      // ACE editor for everything else
-      else if(window.ace) {
-        var mode = this.input_type;
-        // aliases for c/cpp
-        if(mode === 'cpp' || mode === 'c++' || mode === 'c') {
-          mode = 'c_cpp';
-        }
-        
-        this.ace_container = document.createElement('div');
-        this.ace_container.style.width = '100%';
-        this.ace_container.style.position = 'relative';
-        this.ace_container.style.height = '400px';
-        this.input.parentNode.insertBefore(this.ace_container,this.input);
-        this.input.style.display = 'none';
-        this.ace_editor = window.ace.edit(this.ace_container);
-        
-        this.ace_editor.setValue(this.getValue());
-        
-        // The theme
-        if(JSONEditor.plugins.ace.theme) this.ace_editor.setTheme('ace/theme/'+JSONEditor.plugins.ace.theme);
-        // The mode
-        mode = window.ace.require("ace/mode/"+mode);
-        if(mode) this.ace_editor.getSession().setMode(new mode.Mode());
-        
-        // Listen for changes
-        this.ace_editor.on('change',function() {
-          var val = self.ace_editor.getValue();
-          self.input.value = val;
-          self.withProcessingContext(function() {
-            self.refreshValue();
-            self.is_dirty = true;
-            self.onChange();
-          }, 'input_change');
-        });
-      }
-    }
-    
+    var self = this;
     self.theme.afterInputReady(self.input);
   },
   refreshValue: function() {
@@ -325,18 +160,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     if(typeof this.value !== "string") this.value = '';
   },
   destroy: function() {
-    // If using SCEditor, destroy the editor instance
-    if(this.sceditor_instance) {
-      this.sceditor_instance.destroy();
-    }
-    else if(this.epiceditor) {
-      this.epiceditor.unload();
-    }
-    else if(this.ace_editor) {
-      this.ace_editor.destroy();
-    }
-    
-    
     this.template = null;
     if(this.input && this.input.parentNode) this.input.parentNode.removeChild(this.input);
     if(this.label && this.label.parentNode) this.label.parentNode.removeChild(this.label);
