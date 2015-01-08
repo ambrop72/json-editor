@@ -36,23 +36,18 @@ JSONEditor.AbstractEditor = Class.extend({
     if(this.jsoneditor.options.form_name_root) this.formname = this.formname.replace(/^root\[/,this.jsoneditor.options.form_name_root+'[');
     this.key = this.path.split('.').pop();
     this.parent = options.parent;
+    this.watch_id = this.schema.id || null;
     
     this.processing_active = false;
     this.processing_dirty = false;
     this.processing_watch_dirty = false;
     
     if (options.container) {
-      this.setContainer(options.container);
+      this.container = options.container;
     }
   },
   debugPrint: function(msg) {
     console.log(this.path + ': ' + msg);
-  },
-  setContainer: function(container) {
-    this.container = container;
-    if(this.schema.id) this.container.setAttribute('data-schemaid',this.schema.id);
-    if(this.schema.type && typeof this.schema.type === "string") this.container.setAttribute('data-schematype',this.schema.type);
-    this.container.setAttribute('data-schemapath',this.path);
   },
   build: function() {
     var self = this;
@@ -78,31 +73,31 @@ JSONEditor.AbstractEditor = Class.extend({
     };
     
     if(this.schema.watch1) {
-      var path,path_parts,first,root,adjusted_path;
-
       for(var name in this.schema.watch1) {
         if(!this.schema.watch1.hasOwnProperty(name)) continue;
-        path = this.schema.watch1[name];
+        var path = this.schema.watch1[name];
 
-        if(Array.isArray(path)) {
-          path_parts = [path[0]].concat(path[1].split('.'));
-        }
-        else {
-          path_parts = path.split('.');
-          if(!self.theme.closest(self.container,'[data-schemaid="'+path_parts[0]+'"]')) path_parts.unshift('#');
-        }
-        first = path_parts.shift();
-
-        if(first === '#') first = self.jsoneditor.schema.id || 'root';
-
-        // Find the root node for this template variable
-        root = self.theme.closest(self.container,'[data-schemaid="'+first+'"]');
-        if(!root) throw "Could not find ancestor node with id "+first;
-
-        // Keep track of the root node and path for use when rendering the template
-        adjusted_path = root.getAttribute('data-schemapath') + '.' + path_parts.join('.');
+        // Get the ID of the first node and the path within.
+        if (typeof path != 'string') throw "Watch path must be a string";
+        var path_parts = path.split('.');
+        var first_id = path_parts.shift();
         
-        self.jsoneditor.doWatch(adjusted_path,self.watch_listener);
+        // Look for the first node in the ancestor nodes.
+        var first_node = null;
+        for (var node = self.parent; node; node = node.parent) {
+          if (node.watch_id == first_id) {
+            first_node = node;
+            break;
+          }
+        }
+        if (!first_node) {
+          throw "Could not find ancestor node with id " + first_id;
+        }
+        
+        // Construct the final watch path.
+        var adjusted_path = first_node.path + (path_parts.length === 0 ? '' : ('.' + path_parts.join('.')));
+        
+        self.jsoneditor.doWatch(adjusted_path, self.watch_listener);
         
         self.watched[name] = adjusted_path;
       }
