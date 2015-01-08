@@ -76,7 +76,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     // If the object should be rendered as a table row
     if(this.options.table_row) {
       this.editor_holder = this.container;
-      this.no_link_holder = true;
     }
     // If the object should be rendered as a table
     else if(this.options.table) {

@@ -2,13 +2,6 @@ JSONEditor.AbstractTheme = Class.extend({
   getContainer: function() {
     return document.createElement('div');
   },
-  getFloatRightLinkHolder: function() {
-    var el = document.createElement('div');
-    el.style = el.style || {};
-    el.style.cssFloat = 'right';
-    el.style.marginLeft = '10px';
-    return el;
-  },
   getModal: function() {
     var el = document.createElement('div');
     el.style.backgroundColor = 'white';
@@ -34,12 +27,6 @@ JSONEditor.AbstractTheme = Class.extend({
   },
   setGridColumnSize: function(el,size) {
     
-  },
-  getLink: function(text) {
-    var el = document.createElement('a');
-    el.setAttribute('href','#');
-    el.appendChild(document.createTextNode(text));
-    return el;
   },
   disableHeader: function(header) {
     header.style.color = '#ccc';
@@ -311,27 +298,5 @@ JSONEditor.AbstractTheme = Class.extend({
   },
   addTab: function(holder, tab) {
     holder.children[0].appendChild(tab);
-  },
-  getBlockLink: function() {
-    var link = document.createElement('a');
-    link.style.display = 'block';
-    return link;
-  },
-  getBlockLinkHolder: function() {
-    var el = document.createElement('div');
-    return el;
-  },
-  getLinksHolder: function() {
-    var el = document.createElement('div');
-    return el;
-  },
-  createMediaLink: function(holder,link,media) {
-    holder.appendChild(link);
-    media.style.width='100%';
-    holder.appendChild(media);
-  },
-  createImageLink: function(holder,link,image) {
-    holder.appendChild(link);
-    link.appendChild(image);
   }
 });
