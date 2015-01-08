@@ -23,7 +23,6 @@ module.exports = function(grunt) {
           
           // All the editors
           'src/editor.js',
-          'src/editors/null.js',
           'src/editors/string.js',
           'src/editors/number.js',
           'src/editors/integer.js',
@@ -31,11 +30,7 @@ module.exports = function(grunt) {
           'src/editors/array.js',
           'src/editors/table.js',
           'src/editors/multiple.js',
-          'src/editors/enum.js',
           'src/editors/select.js',
-          'src/editors/multiselect.js',
-          'src/editors/base64.js',
-          'src/editors/upload.js',
           'src/editors/derived.js',
 
           // All the themes and iconlibs
