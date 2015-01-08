@@ -59,23 +59,12 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       this.error_holder = document.createElement('div');
       this.container.appendChild(this.error_holder);
 
-      if(this.schema.format === 'tabs') {
-        this.controls = this.theme.getHeaderButtonHolder();
-        this.title.appendChild(this.controls);
-        this.tabs_holder = this.theme.getTabHolder();
-        this.container.appendChild(this.tabs_holder);
-        this.row_holder = this.theme.getTabContentHolder(this.tabs_holder);
-
-        this.active_tab = null;
-      }
-      else {
-        this.panel = this.theme.getIndentedPanel();
-        this.container.appendChild(this.panel);
-        this.row_holder = document.createElement('div');
-        this.panel.appendChild(this.row_holder);
-        this.controls = this.theme.getButtonHolder();
-        this.panel.appendChild(this.controls);
-      }
+      this.panel = this.theme.getIndentedPanel();
+      this.container.appendChild(this.panel);
+      this.row_holder = document.createElement('div');
+      this.panel.appendChild(this.row_holder);
+      this.controls = this.theme.getButtonHolder();
+      this.panel.appendChild(this.controls);
     }
     else {
         this.panel = this.theme.getIndentedPanel();
@@ -94,7 +83,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   },
   onChildEditorChange: function(editor) {
     this.refreshValue();
-    this.refreshTabs(true);
     this.onChange();
   },
   getItemTitle: function() {
@@ -158,10 +146,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     var editor = this.jsoneditor.getEditorClass(schema);
 
     var holder;
-    if(this.tabs_holder) {
-      holder = this.theme.getTabContent();
-    }
-    else if(item_info.child_editors) {
+    if(item_info.child_editors) {
       holder = this.theme.getChildEditorHolder();
     }
     else {
@@ -212,7 +197,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     var holder = row.container;
     row.destroy();
     if(holder.parentNode) holder.parentNode.removeChild(holder);
-    if(row.tab && row.tab.parentNode) row.tab.parentNode.removeChild(row.tab);
   },
   getMax: function() {
     if((Array.isArray(this.schema.items)) && this.schema.additionalItems === false) {
@@ -221,26 +205,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     else {
       return this.schema.maxItems || Infinity;
     }
-  },
-  refreshTabs: function(refresh_headers) {
-    var self = this;
-    $each(this.rows, function(i,row) {
-      if(!row.tab) return;
-
-      if(refresh_headers) {
-        row.tab_text.textContent = row.getHeaderText();
-      }
-      else {
-        if(row.tab === self.active_tab) {
-          self.theme.markTabActive(row.tab);
-          row.container.style.display = '';
-        }
-        else {
-          self.theme.markTabInactive(row.tab);
-          row.container.style.display = 'none';
-        }
-      }
-    });
   },
   setValueImpl: function(value) {
     // Update the array's value, adding/removing rows when necessary
@@ -276,20 +240,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     }
     self.rows = self.rows.slice(0,value.length);
 
-    // Set the active tab
-    var new_active_tab = null;
-    $each(self.rows, function(i,row) {
-      if(row.tab === self.active_tab) {
-        new_active_tab = row.tab;
-        return false;
-      }
-    });
-    if(!new_active_tab && self.rows.length) new_active_tab = self.rows[0].tab;
-
-    self.active_tab = new_active_tab;
-
     self.refreshValue();
-    self.refreshTabs();
 
     self.onChange();
     
@@ -394,20 +345,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     
     self.rows[i] = this.getElementEditor(i);
 
-    if(self.tabs_holder) {
-      self.rows[i].tab_text = document.createElement('span');
-      self.rows[i].tab_text.textContent = self.rows[i].getHeaderText();
-      self.rows[i].tab = self.theme.getTab(self.rows[i].tab_text);
-      self.rows[i].tab.addEventListener('click', function(e) {
-        self.active_tab = self.rows[i].tab;
-        self.refreshTabs();
-        e.preventDefault();
-        e.stopPropagation();
-      });
-
-      self.theme.addTab(self.tabs_holder, self.rows[i].tab);
-    }
-    
     var controls_holder = controls_holder_func(self.rows[i]);
     
     // Buttons to delete row, move row up, and move row down
@@ -427,16 +364,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         var newval = [];
         $each(value,function(j,row) {
           if(j===i) {
-            // If the one we're deleting is the active tab
-            if(self.tabs_holder && self.rows[j].tab === self.active_tab) {
-              // Make the next tab active if there is one
-              // Note: the next tab is going to be the current tab after deletion
-              if(self.rows[j+1]) self.active_tab = self.rows[j].tab;
-              // Otherwise, make the previous tab active if there is one
-              else if(j) self.active_tab = self.rows[j-1].tab;
-              else self.active_tab = null;
-            }
-            
             return; // If this is the one we're deleting
           }
           newval.push(row);
@@ -497,9 +424,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     rows[i] = tmp;
 
     self.withProcessingContext(function() {
-      if (self.tabs_holder) {
-        self.active_tab = self.rows[down?(i):(i-1)].tab;
-      }
       self.setValueImpl(rows);
     }, 'move_button_click');
   },
@@ -606,8 +530,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     var self = this;
     var i = self.rows.length;
     self.addRow();
-    self.active_tab = self.rows[i].tab;
-    self.refreshTabs();
     self.refreshValue();
     self.onChange();
   },
@@ -620,11 +542,9 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     var self = this;
     if (expanding) {
       self.row_holder.style.display = self.row_holder_display;
-      if(self.tabs_holder) self.tabs_holder.style.display = '';
       self.controls.style.display = self.controls_display;
     } else {
       self.row_holder.style.display = 'none';
-      if(self.tabs_holder) self.tabs_holder.style.display = 'none';
       self.controls.style.display = 'none';
     }
   }
