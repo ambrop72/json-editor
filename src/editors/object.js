@@ -3,7 +3,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     return $extend({},this.schema.default || {});
   },
   enable: function() {
-    if(this.editjson_button) this.editjson_button.disabled = false;
     if(this.addproperty_button) this.addproperty_button.disabled = false;
     
     this._super();
@@ -15,9 +14,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     }
   },
   disable: function() {
-    if(this.editjson_button) this.editjson_button.disabled = true;
     if(this.addproperty_button) this.addproperty_button.disabled = true;
-    this.hideEditJSON();
     
     this._super();
     if(this.editors) {
@@ -95,30 +92,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       this.container.appendChild(this.title);
       this.container.style.position = 'relative';
       
-      // Edit JSON modal
-      this.editjson_holder = this.theme.getModal();
-      this.editjson_textarea = this.theme.getTextareaInput();
-      this.editjson_textarea.style.height = '170px';
-      this.editjson_textarea.style.width = '300px';
-      this.editjson_textarea.style.display = 'block';
-      this.editjson_save = this.getButton('Save','save','Save');
-      this.editjson_save.addEventListener('click',function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        self.withProcessingContext(function() {
-          self.saveJSON();
-        }, 'editjson_save_click');
-      });
-      this.editjson_cancel = this.getButton('Cancel','cancel','Cancel');
-      this.editjson_cancel.addEventListener('click',function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        self.hideEditJSON();
-      });
-      this.editjson_holder.appendChild(this.editjson_textarea);
-      this.editjson_holder.appendChild(this.editjson_save);
-      this.editjson_holder.appendChild(this.editjson_cancel);
-      
       // Manage Properties modal
       this.addproperty_holder = this.theme.getModal();
       this.addproperty_list = document.createElement('div');
@@ -181,10 +154,8 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
 
       // Control buttons
       this.title_controls = this.theme.getHeaderButtonHolder();
-      this.editjson_controls = this.theme.getHeaderButtonHolder();
       this.addproperty_controls = this.theme.getHeaderButtonHolder();
       this.title.appendChild(this.title_controls);
-      this.title.appendChild(this.editjson_controls);
       this.title.appendChild(this.addproperty_controls);
 
       // Show/Hide button
@@ -219,24 +190,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
         this.toggle_button.style.display = 'none';
       }
       
-      // Edit JSON Button
-      this.editjson_button = this.getButton('JSON','edit','Edit JSON');
-      this.editjson_button.addEventListener('click',function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        self.toggleEditJSON();
-      });
-      this.editjson_controls.appendChild(this.editjson_button);
-      this.editjson_controls.appendChild(this.editjson_holder);
-      
-      // Edit JSON Buttton disabled
-      if(this.schema.options && typeof this.schema.options.disable_edit_json !== "undefined") {
-        if(this.schema.options.disable_edit_json) this.editjson_button.style.display = 'none';
-      }
-      else if(this.jsoneditor.options.disable_edit_json) {
-        this.editjson_button.style.display = 'none';
-      }
-      
       // Object Properties Button
       this.addproperty_button = this.getButton('Properties','edit','Object Properties');
       this.addproperty_button.addEventListener('click',function(e) {
@@ -263,52 +216,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       // Do the layout again now that we know the approximate heights of elements
       this.layoutEditors();
     }
-  },
-  showEditJSON: function() {
-    if(!this.editjson_holder) return;
-    this.hideAddProperty();
-    
-    // Position the form directly beneath the button
-    // TODO: edge detection
-    this.editjson_holder.style.left = this.editjson_button.offsetLeft+"px";
-    this.editjson_holder.style.top = this.editjson_button.offsetTop + this.editjson_button.offsetHeight+"px";
-    
-    // Start the textarea with the current value
-    this.editjson_textarea.value = JSON.stringify(this.getValue(),null,2);
-    
-    // Disable the rest of the form while editing JSON
-    this.disable();
-    
-    this.editjson_holder.style.display = '';
-    this.editjson_button.disabled = false;
-    this.editing_json = true;
-  },
-  hideEditJSON: function() {
-    if(!this.editjson_holder) return;
-    if(!this.editing_json) return;
-    
-    this.editjson_holder.style.display = 'none';
-    this.enable();
-    this.editing_json = false;
-  },
-  saveJSON: function() {
-    if(!this.editjson_holder) return;
-    
-    var json;
-    try {
-      json = JSON.parse(this.editjson_textarea.value);
-    }
-    catch(e) {
-      window.alert('invalid JSON');
-      throw e;
-    }
-    
-    this.setValue(json);
-    this.hideEditJSON();
-  },
-  toggleEditJSON: function() {
-    if(this.editing_json) this.hideEditJSON();
-    else this.showEditJSON();
   },
   addPropertyCheckbox: function(key) {
     var self = this;
@@ -340,7 +247,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   },
   showAddProperty: function() {
     if(!this.addproperty_holder) return;
-    this.hideEditJSON();
     
     // Position the form directly beneath the button
     // TODO: edge detection
