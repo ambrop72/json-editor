@@ -380,10 +380,10 @@ JSONEditor.prototype = {
           }, []);
         }
         // Type should be intersected and is either an array or string
-        else if(prop === 'type') {
+        else if(prop === 'type' && (typeof val === "string" || Array.isArray(val))) {
           // Make sure we're dealing with arrays
-          if(typeof val !== "object") val = [val];
-          if(typeof obj2.type !== "object") obj2.type = [obj2.type];
+          if(typeof val === "string") val = [val];
+          if(typeof obj2.type === "string") obj2.type = [obj2.type];
 
 
           extended.type = val.filter(function(n) {
