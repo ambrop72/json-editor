@@ -16,7 +16,6 @@ JSONEditor.prototype = {
     this.schema = this.options.schema;
     this.theme = new theme_class();
     this.template = this.options.template;
-    this.refs = this.options.refs || {};
     this.uuid = 0;
     this.__data = {};
     
@@ -28,36 +27,32 @@ JSONEditor.prototype = {
     
     this.translate = this.options.translate || JSONEditor.defaults.translate;
 
-    // Fetch all external refs via ajax
-    this._loadExternalRefs(this.schema, function() {
-      self._getDefinitions(self.schema);
-      self.validator = new JSONEditor.Validator(self);
-      
-      // Create the root editor
-      var editor_class = self.getEditorClass(self.schema);
-      self.root = self.createEditor(editor_class, {
-        jsoneditor: self,
-        schema: self.schema,
-        required: true,
-        container: self.root_container
-      });
-      
-      self.root.build();
+    self.validator = new JSONEditor.Validator(self);
+    
+    // Create the root editor
+    var editor_class = self.getEditorClass(self.schema);
+    self.root = self.createEditor(editor_class, {
+      jsoneditor: self,
+      schema: self.schema,
+      required: true,
+      container: self.root_container
+    });
+    
+    self.root.build();
 
-      // Starting data
-      if(self.options.startval) self.root.setValue(self.options.startval);
+    // Starting data
+    if(self.options.startval) self.root.setValue(self.options.startval);
 
+    self.validation_results = self.validator.validate(self.root.getValue());
+    self.root.showValidationErrors(self.validation_results);
+    self.ready = true;
+
+    // Fire ready event asynchronously
+    window.requestAnimationFrame(function() {
       self.validation_results = self.validator.validate(self.root.getValue());
       self.root.showValidationErrors(self.validation_results);
-      self.ready = true;
-
-      // Fire ready event asynchronously
-      window.requestAnimationFrame(function() {
-        self.validation_results = self.validator.validate(self.root.getValue());
-        self.root.showValidationErrors(self.validation_results);
-        self.trigger('ready');
-        self.trigger('change');
-      });
+      self.trigger('ready');
+      self.trigger('change');
     });
   },
   getValue: function() {
@@ -279,108 +274,6 @@ JSONEditor.prototype = {
   disable: function() {
     this.root.disable();
   },
-  _getDefinitions: function(schema,path) {
-    path = path || '#/definitions/';
-    if(schema.definitions) {
-      for(var i in schema.definitions) {
-        if(!schema.definitions.hasOwnProperty(i)) continue;
-        this.refs[path+i] = schema.definitions[i];
-        if(schema.definitions[i].definitions) {
-          this._getDefinitions(schema.definitions[i],path+i+'/definitions/');
-        }
-      }
-    }
-  },
-  _getExternalRefs: function(schema) {
-    var refs = {};
-    var merge_refs = function(newrefs) {
-      for(var i in newrefs) {
-        if(newrefs.hasOwnProperty(i)) {
-          refs[i] = true;
-        }
-      }
-    };
-    
-    if(schema.$ref && schema.$ref.substr(0,1) !== "#" && !this.refs[schema.$ref]) {
-      refs[schema.$ref] = true;
-    }
-    
-    for(var i in schema) {
-      if(!schema.hasOwnProperty(i)) continue;
-      if(schema[i] && typeof schema[i] === "object" && Array.isArray(schema[i])) {
-        for(var j=0; j<schema[i].length; j++) {
-          if(typeof schema[i][j]==="object") {
-            merge_refs(this._getExternalRefs(schema[i][j]));
-          }
-        }
-      }
-      else if(schema[i] && typeof schema[i] === "object") {
-        merge_refs(this._getExternalRefs(schema[i]));
-      }
-    }
-    
-    return refs;
-  },
-  _loadExternalRefs: function(schema, callback) {
-    var self = this;
-    var refs = this._getExternalRefs(schema);
-    
-    var done = 0, waiting = 0, callback_fired = false;
-    
-    $each(refs,function(url) {
-      if(self.refs[url]) return;
-      if(!self.options.ajax) throw "Must set ajax option to true to load external ref "+url;
-      self.refs[url] = 'loading';
-      waiting++;
-
-      var r = new XMLHttpRequest(); 
-      r.open("GET", url, true);
-      r.onreadystatechange = function () {
-        if (r.readyState != 4) return; 
-        // Request succeeded
-        if(r.status === 200) {
-          var response;
-          try {
-            response = JSON.parse(r.responseText);
-          }
-          catch(e) {
-            window.console.log(e);
-            throw "Failed to parse external ref "+url;
-          }
-          if(!response || typeof response !== "object") throw "External ref does not contain a valid schema - "+url;
-          
-          self.refs[url] = response;
-          self._loadExternalRefs(response,function() {
-            done++;
-            if(done >= waiting && !callback_fired) {
-              callback_fired = true;
-              callback();
-            }
-          });
-        }
-        // Request failed
-        else {
-          window.console.log(r);
-          throw "Failed to fetch ref via ajax- "+url;
-        }
-      };
-      r.send();
-    });
-    
-    if(!waiting) {
-      callback();
-    }
-  },
-  expandRefs: function(schema) {
-    schema = $extend({},schema);
-    
-    while (schema.$ref) {
-      var ref = schema.$ref;
-      delete schema.$ref;
-      schema = this.extendSchemas(schema,this.refs[ref]);
-    }
-    return schema;
-  },
   expandSchema: function(schema) {
     var self = this;
     var extended = $extend({},schema);
@@ -467,7 +360,7 @@ JSONEditor.prototype = {
       }
     }
     
-    return this.expandRefs(extended);
+    return extended;
   },
   extendSchemas: function(obj1, obj2) {
     obj1 = $extend({},obj1);

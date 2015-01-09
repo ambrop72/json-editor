@@ -4,7 +4,7 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     
     self.arrayBaseBuildImpl();
     
-    var item_schema = this.jsoneditor.expandRefs(this.schema.items || {});
+    var item_schema = this.schema.items || {};
     
     this.item_title = item_schema.title || 'row';
     this.item_default = item_schema.default || null;

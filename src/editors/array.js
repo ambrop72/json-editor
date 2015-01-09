@@ -88,8 +88,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   getItemTitle: function() {
     if(!this.item_title) {
       if(this.schema.items && !Array.isArray(this.schema.items)) {
-        var tmp = this.jsoneditor.expandRefs(this.schema.items);
-        this.item_title = tmp.title || 'item';
+        this.item_title = this.schema.items.title || 'item';
       }
       else {
         this.item_title = 'item';
@@ -126,9 +125,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     var stringified = JSON.stringify(schema);
     if(typeof this.item_info[stringified] !== "undefined") return this.item_info[stringified];
     
-    // Get the schema for this item
-    schema = this.jsoneditor.expandRefs(schema);
-      
     this.item_info[stringified] = {
       title: schema.title || "item",
       'default': schema.default,
@@ -140,7 +136,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   getElementEditor: function(i) {
     var item_info = this.getItemInfo(i);
     var schema = this.getItemSchema(i);
-    schema = this.jsoneditor.expandRefs(schema);
     schema.title = item_info.title+' '+(i+1);
 
     var editor = this.jsoneditor.getEditorClass(schema);

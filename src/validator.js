@@ -16,7 +16,7 @@ JSONEditor.Validator = Class.extend({
     path = path || 'root';
 
     // Work on a copy of the schema
-    schema = $extend({},this.jsoneditor.expandRefs(schema));
+    schema = $extend({}, schema);
 
     /*
      * Type Agnostic Validation
