@@ -59,63 +59,9 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     }
     // Dynamic Enum
     else if(this.schema.enumSource) {
-      this.enumSource = [];
-      this.enum_display = [];
-      this.enum_options = [];
-      this.enum_values = [];
-      
-      // Shortcut declaration for using a single array
-      if(!(Array.isArray(this.schema.enumSource))) {
-        if(this.schema.enumValue) {
-          this.enumSource = [
-            {
-              source: this.schema.enumSource,
-              value: this.schema.enumValue
-            }
-          ];
-        }
-        else {
-          this.enumSource = [
-            {
-              source: this.schema.enumSource
-            }
-          ];
-        }
-      }
-      else {
-        for(i=0; i<this.schema.enumSource.length; i++) {
-          // Shorthand for watched variable
-          if(typeof this.schema.enumSource[i] === "string") {
-            this.enumSource[i] = {
-              source: this.schema.enumSource[i]
-            };
-          }
-          // Make a copy of the schema
-          else if(!(Array.isArray(this.schema.enumSource[i]))) {
-            this.enumSource[i] = $extend({},this.schema.enumSource[i]);
-          }
-          else {
-            this.enumSource[i] = this.schema.enumSource[i];
-          }
-        }
-      }
-      
-      // Now, enumSource is an array of sources
-      // Walk through this array and fix up the values
-      for(i=0; i<this.enumSource.length; i++) {
-        if(this.enumSource[i].value) {
-          this.enumSource[i].value = this.jsoneditor.compileTemplate(this.enumSource[i].value, this.template_engine);
-        }
-        if(this.enumSource[i].title) {
-          this.enumSource[i].title = this.jsoneditor.compileTemplate(this.enumSource[i].title, this.template_engine);
-        }
-        if(this.enumSource[i].filter) {
-          this.enumSource[i].filter = this.jsoneditor.compileTemplate(this.enumSource[i].filter, this.template_engine);
-        }
-        if(this.enumSource[i].sourceTemplate) {
-          this.enumSource[i].sourceTemplate = this.jsoneditor.compileTemplate(this.enumSource[i].sourceTemplate, this.template_engine);
-        }
-      }
+      this.enum_source_template = this.jsoneditor.compileTemplate(this.schema.enumSource.sourceTemplate, this.template_engine);
+      this.enum_value_template = this.jsoneditor.compileTemplate(this.schema.enumSource.value, this.template_engine);
+      this.enum_title_template = this.jsoneditor.compileTemplate(this.schema.enumSource.title, this.template_engine);
     }
     // Other, not supported
     else {
@@ -165,79 +111,18 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     }, 'input_change');
   },
   onWatchedFieldChange: function() {
-    var self = this, vars, j;
-    
     // If this editor uses a dynamic select box
-    if(this.enumSource) {
-      vars = this.getWatchedFieldValues();
+    if (this.enum_source_template) {
+      var vars = this.getWatchedFieldValues();
+      
+      var items = this.enum_source_template(vars);
+      
       var select_options = [];
       var select_titles = [];
-      
-      for(var i=0; i<this.enumSource.length; i++) {
-        var src = this.enumSource[i];
-        
-        // Constant values
-        if(Array.isArray(src)) {
-          select_options = select_options.concat(src);
-          select_titles = select_titles.concat(src);
-        }
-        // A watched field
-        else if(src.sourceTemplate || vars[src.source]) {
-          var items;
-          if(src.sourceTemplate) {
-            items = src.sourceTemplate($extend({},vars));
-          } else {
-            items = vars[src.source];
-          }
-          
-          // Only use a predefined part of the array
-          if(src.slice) {
-            items = Array.prototype.slice.apply(items,src.slice);
-          }
-          // Filter the items
-          if(src.filter) {
-            var new_items = [];
-            for(j=0; j<items.length; j++) {
-              if(src.filter($extend({},vars,{i:j,item:items[j]}))) new_items.push(items[j]);
-            }
-            items = new_items;
-          }
-          
-          var item_titles = [];
-          var item_values = [];
-          for(j=0; j<items.length; j++) {
-            var item = items[j];
-            
-            // Rendered value
-            if(src.value) {
-              item_values[j] = src.value($extend({},vars,{
-                i: j,
-                item: item
-              }));
-            }
-            // Use value directly
-            else {
-              item_values[j] = items[j];
-            }
-            
-            // Rendered title
-            if(src.title) {
-              item_titles[j] = src.title($extend({},vars,{
-                i: j,
-                item: item
-              }));
-            }
-            // Use value as the title also
-            else {
-              item_titles[j] = item_values[j];
-            }
-          }
-          
-          // TODO: sort
-          
-          select_options = select_options.concat(item_values);
-          select_titles = select_titles.concat(item_titles);
-        }
+      for (var j = 0; j < items.length; j++) {
+        var item_vars = {watch_vars: vars, i: j, item: items[j]};
+        select_options[j] = this.enum_value_template(item_vars);
+        select_titles[j] = this.enum_title_template(item_vars);
       }
       
       var prev_value = this.value;
