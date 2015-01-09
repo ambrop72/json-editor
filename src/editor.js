@@ -64,7 +64,7 @@ JSONEditor.AbstractEditor = Class.extend({
     
     // Watched fields
     this.watched = {};
-    if(this.schema.vars) this.schema.watch1 = this.schema.vars;
+    if(this.schema.vars) this.schema.watch = this.schema.vars;
     this.watched_values = {};
     this.watch_listener = function() {
       self.withProcessingContext(function() {
@@ -72,10 +72,10 @@ JSONEditor.AbstractEditor = Class.extend({
       }, 'watch_listener');
     };
     
-    if(this.schema.watch1) {
-      for(var name in this.schema.watch1) {
-        if(!this.schema.watch1.hasOwnProperty(name)) continue;
-        var path = this.schema.watch1[name];
+    if(this.schema.watch) {
+      for(var name in this.schema.watch) {
+        if(!this.schema.watch.hasOwnProperty(name)) continue;
+        var path = this.schema.watch[name];
 
         // Get the ID of the first node and the path within.
         if (typeof path != 'string') throw "Watch path must be a string";
