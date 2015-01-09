@@ -3,8 +3,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     return $extend({},this.schema.default || {});
   },
   enable: function() {
-    if(this.addproperty_button) this.addproperty_button.disabled = false;
-    
     this._super();
     if(this.editors) {
       for(var i in this.editors) {
@@ -14,8 +12,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     }
   },
   disable: function() {
-    if(this.addproperty_button) this.addproperty_button.disabled = true;
-    
     this._super();
     if(this.editors) {
       for(var i in this.editors) {
@@ -32,7 +28,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     var container = document.createElement('div');
     $each(this.computeOrder(), function(i,key) {
       var editor = self.editors[key];
-      if(editor.property_removed) return;
       var row = self.theme.getGridRow();
       container.appendChild(row);
       
@@ -45,25 +40,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     this.row_container.innerHTML = '';
     this.row_container.appendChild(container);
   },
-  getPropertySchema: function(key) {
-    // Schema declared directly in properties
-    var schema = this.schema.properties[key] || {};
-    schema = $extend({},schema);
-    
-    // Any matching patternProperties should be merged in
-    if(this.schema.patternProperties) {
-      for(var i in this.schema.patternProperties) {
-        if(!this.schema.patternProperties.hasOwnProperty(i)) continue;
-        var regex = new RegExp(i);
-        if(regex.test(key)) {
-          schema.allOf = schema.allOf || [];
-          schema.allOf.push(this.schema.patternProperties[i]);
-        }
-      }
-    }
-    
-    return schema;
-  },
   buildImpl: function() {
     this.editors = {};
     var self = this;
@@ -73,11 +49,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     // If the object should be rendered as a table row
     if(this.options.table_row) {
       this.editor_holder = this.container;
-    }
-    // If the object should be rendered as a table
-    else if(this.options.table) {
-      // TODO: table display format
-      throw "Not supported yet";
     }
     // If the object should be rendered as a div
     else {
@@ -91,47 +62,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       }
       this.container.appendChild(this.title);
       this.container.style.position = 'relative';
-      
-      // Manage Properties modal
-      this.addproperty_holder = this.theme.getModal();
-      this.addproperty_list = document.createElement('div');
-      this.addproperty_list.style.width = '295px';
-      this.addproperty_list.style.maxHeight = '160px';
-      this.addproperty_list.style.padding = '5px 0';
-      this.addproperty_list.style.overflowY = 'auto';
-      this.addproperty_list.style.overflowX = 'hidden';
-      this.addproperty_list.style.paddingLeft = '5px';
-      this.addproperty_add = this.getButton('add','add','add');
-      this.addproperty_input = this.theme.getFormInputField('text');
-      this.addproperty_input.setAttribute('placeholder','Property name...');
-      this.addproperty_input.style.width = '220px';
-      this.addproperty_input.style.marginBottom = '0';
-      this.addproperty_input.style.display = 'inline-block';
-      this.addproperty_add.addEventListener('click',function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        if(self.addproperty_input.value) {
-          if(self.editors[self.addproperty_input.value]) {
-            window.alert('there is already a property with that name');
-            return;
-          }
-          
-          self.withProcessingContext(function() {
-            self.addObjectProperty(self.addproperty_input.value);
-            if(self.editors[self.addproperty_input.value]) {
-              self.editors[self.addproperty_input.value].disable();
-            }
-            self.onChange();
-          }, 'addproperty_add');
-        }
-      });
-      this.addproperty_holder.appendChild(this.addproperty_list);
-      this.addproperty_holder.appendChild(this.addproperty_input);
-      this.addproperty_holder.appendChild(this.addproperty_add);
-      var spacer = document.createElement('div');
-      spacer.style.clear = 'both';
-      this.addproperty_holder.appendChild(spacer);
-      
       
       // Description
       if(this.schema.description) {
@@ -154,9 +84,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
 
       // Control buttons
       this.title_controls = this.theme.getHeaderButtonHolder();
-      this.addproperty_controls = this.theme.getHeaderButtonHolder();
       this.title.appendChild(this.title_controls);
-      this.title.appendChild(this.addproperty_controls);
 
       // Show/Hide button
       this.collapsed = false;
@@ -189,17 +117,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       else if(this.jsoneditor.options.disable_collapse) {
         this.toggle_button.style.display = 'none';
       }
-      
-      // Object Properties Button
-      this.addproperty_button = this.getButton('Properties','edit','Object Properties');
-      this.addproperty_button.addEventListener('click',function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        self.toggleAddProperty();
-      });
-      this.addproperty_controls.appendChild(this.addproperty_button);
-      this.addproperty_controls.appendChild(this.addproperty_holder);
-      this.refreshAddProperties();
     }
     
     // Set the initial value, creating editors.
@@ -217,82 +134,12 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       this.layoutEditors();
     }
   },
-  addPropertyCheckbox: function(key) {
-    var self = this;
-    var checkbox, label, control;
-    
-    checkbox = self.theme.getCheckbox();
-    checkbox.style.width = 'auto';
-    label = self.theme.getCheckboxLabel(key);
-    control = self.theme.getFormControl(label,checkbox);
-    control.style.paddingBottom = control.style.marginBottom = control.style.paddingTop = control.style.marginTop = 0;
-    control.style.height = 'auto';
-    //control.style.overflowY = 'hidden';
-    self.addproperty_list.appendChild(control);
-    
-    checkbox.checked = key in this.editors;
-    checkbox.addEventListener('change',function() {
-      self.withProcessingContext(function() {
-        if (checkbox.checked) {
-          self.addObjectProperty(key);
-        } else {
-          self.removeObjectProperty(key);
-        }
-        self.onChange();
-      }, 'addproperty_checkbox');
-    });
-    self.addproperty_checkboxes[key] = checkbox;
-    
-    return checkbox;
-  },
-  showAddProperty: function() {
-    if(!this.addproperty_holder) return;
-    
-    // Position the form directly beneath the button
-    // TODO: edge detection
-    this.addproperty_holder.style.left = this.addproperty_button.offsetLeft+"px";
-    this.addproperty_holder.style.top = this.addproperty_button.offsetTop + this.addproperty_button.offsetHeight+"px";
-    
-    // Disable the rest of the form while editing JSON
-    this.disable();
-    
-    this.adding_property = true;
-    this.addproperty_button.disabled = false;
-    this.addproperty_holder.style.display = '';
-    this.refreshAddProperties();
-  },
-  hideAddProperty: function() {
-    if(!this.addproperty_holder) return;
-    if(!this.adding_property) return;
-    
-    this.addproperty_holder.style.display = 'none';
-    this.enable();
-    
-    this.adding_property = false;
-  },
-  toggleAddProperty: function() {
-    if(this.adding_property) this.hideAddProperty();
-    else this.showAddProperty();
-  },
-  removeObjectProperty: function(property) {
-    if(this.editors[property]) {
-      this.editors[property].destroy();
-      delete this.editors[property];
-      
-      this.refreshValue();
-      this.layoutEditors();
-    }
-  },
   addObjectProperty: function(name) {
     var self = this;
     
     // Property is already added
     if(this.editors[name]) return;
     
-    if(!this.canHaveAdditionalProperties() && (!this.schema.properties || !this.schema.properties[name])) {
-      return;
-    }
-
     var holder;
     var extra_opts = {};
     if (self.options.table_row) {
@@ -303,7 +150,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       holder = self.theme.getChildEditorHolder();
     }
     
-    var schema = self.getPropertySchema(name);
+    var schema = $extend({}, self.schema.properties[name]);
     var editor = self.jsoneditor.getEditorClass(schema);
     self.editor_holder.appendChild(holder);
     self.editors[name] = self.jsoneditor.createEditor(editor, $extend({
@@ -324,9 +171,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   onChildEditorChange: function(editor) {
     this.refreshValue();
     this.onChange();
-  },
-  canHaveAdditionalProperties: function() {
-    return this.schema.additionalProperties !== false && !this.jsoneditor.options.no_additional_properties;
   },
   destroy: function() {
     $each(this.editors, function(i,el) {
@@ -362,97 +206,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       if(!this.editors.hasOwnProperty(i)) continue;
       this.value[i] = this.editors[i].getValue();
     }
-    
-    if(this.adding_property) this.refreshAddProperties();
-  },
-  refreshAddProperties: function() {
-    if(this.options.disable_properties || this.jsoneditor.options.disable_properties) {
-      this.addproperty_controls.style.display = 'none';
-      return;
-    }
-
-    var can_add = false, can_remove = false, num_props = 0, i, show_modal = false;
-    
-    // Get number of editors
-    for(i in this.editors) {
-      if(!this.editors.hasOwnProperty(i)) continue;
-      num_props++;
-    }
-    
-    // Determine if we can add back removed properties
-    can_add = this.canHaveAdditionalProperties() && !(typeof this.schema.maxProperties !== "undefined" && num_props >= this.schema.maxProperties);
-    
-    if(this.addproperty_checkboxes) {
-      this.addproperty_list.innerHTML = '';
-    }
-    this.addproperty_checkboxes = {};
-    
-    // Check for which editors can't be removed or added back
-    for(i in this.editors) {
-      if(!this.editors.hasOwnProperty(i)) continue;
-      
-      this.addPropertyCheckbox(i);
-      
-      if(this.isRequired(this.editors[i])) {
-        this.addproperty_checkboxes[i].disabled = true;
-      }
-      
-      if(typeof this.schema.minProperties !== "undefined" && num_props <= this.schema.minProperties) {
-        this.addproperty_checkboxes[i].disabled = this.addproperty_checkboxes[i].checked;
-        if(!this.addproperty_checkboxes[i].checked) show_modal = true;
-      }
-      else if(!(i in this.editors)) {
-        if(!can_add  && !this.schema.properties.hasOwnProperty(i)) {
-          this.addproperty_checkboxes[i].disabled = true;
-        }
-        else {
-          this.addproperty_checkboxes[i].disabled = false;
-          show_modal = true;
-        }
-      }
-      else {
-        show_modal = true;
-        can_remove = true;
-      }
-    }
-    
-    if(this.canHaveAdditionalProperties()) {
-      show_modal = true;
-    }
-    
-    // Additional addproperty checkboxes not tied to a current editor
-    for(i in this.schema.properties) {
-      if(!this.schema.properties.hasOwnProperty(i)) continue;
-      if(this.editors[i]) continue;
-      show_modal = true;
-      this.addPropertyCheckbox(i);
-      this.addproperty_checkboxes[i].disabled = !can_add;
-    }
-    
-    // If no editors can be added or removed, hide the modal button
-    if(!show_modal) {
-      this.hideAddProperty();
-      this.addproperty_controls.style.display = 'none';
-    }
-    // If additional properties are disabled
-    else if(!this.canHaveAdditionalProperties()) {
-      this.addproperty_add.style.display = 'none';
-      this.addproperty_input.style.display = 'none';
-    }
-    // If no new properties can be added
-    else if(!can_add) {
-      this.addproperty_add.disabled = true;
-    }
-    // If new properties can be added
-    else {
-      this.addproperty_add.disabled = false;
-    }
-  },
-  isRequired: function(editor) {
-    if(typeof editor.schema.required === "boolean") return editor.schema.required;
-    else if(Array.isArray(this.schema.required)) return this.schema.required.indexOf(editor.key) > -1;
-    else if(this.jsoneditor.options.required_by_default) return true;
-    else return false;
   },
   setValueImpl: function(value) {
     this.mySetValue(value, false);
@@ -472,27 +225,16 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       if(typeof value[i] !== "undefined") {
         setActions.push({name: i, value: value[i]});
       }
-      // Otherwise, remove value unless this is the initial TBD set or it's required
-      else if(!initial && !self.isRequired(editor)) {
-        self.removeObjectProperty(i);
-      }
       // Otherwise, set the value to the default
       else {
         setActions.push({name: i});
       }
     });
 
-    // Also try to set properties for which we don't have editors.
-    $each(value, function(i,val) {
-      if(!self.editors.hasOwnProperty(i)) {
-        setActions.push({name: i, value: val});
-      }
-    });
-    
     // For the initial value, we need to make sure we actually have the editors.
     if (initial) {
       $each(self.schema.properties, function(i, schema) {
-        if (!self.editors.hasOwnProperty(i) && !value.hasOwnProperty(i)) {
+        if (!self.editors.hasOwnProperty(i)) {
           setActions.push({name: i});
         }
       });
@@ -514,10 +256,8 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     $each(setActions, function(ind, action) {
       var i = action.name;
       self.addObjectProperty(i);
-      if (self.editors[i]) {
-        var set_value = action.hasOwnProperty('value') ? action.value : self.editors[i].getDefault();
-        self.editors[i].setValue(set_value);
-      }
+      var set_value = action.hasOwnProperty('value') ? action.value : self.editors[i].getDefault();
+      self.editors[i].setValue(set_value);
     });
     
     this.refreshValue();
