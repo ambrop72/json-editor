@@ -52,11 +52,12 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
       }
     }
 
-    var editor_class = self.jsoneditor.getEditorClass(schema);
+    var expanded_schema = this.jsoneditor.expandSchema(schema);
+    var editor_class = self.jsoneditor.getEditorClass(expanded_schema);
 
     self.editor = self.jsoneditor.createEditor(editor_class,{
       jsoneditor: self.jsoneditor,
-      schema: schema,
+      schema: expanded_schema,
       container: holder,
       path: self.path,
       parent: self,

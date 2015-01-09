@@ -30,10 +30,11 @@ JSONEditor.prototype = {
     self.validator = new JSONEditor.Validator(self);
     
     // Create the root editor
-    var editor_class = self.getEditorClass(self.schema);
+    var expanded_schema = self.expandSchema(self.schema);
+    var editor_class = self.getEditorClass(expanded_schema);
     self.root = self.createEditor(editor_class, {
       jsoneditor: self,
-      schema: self.schema,
+      schema: expanded_schema,
       required: true,
       container: self.root_container
     });
@@ -137,8 +138,6 @@ JSONEditor.prototype = {
   },
   getEditorClass: function(schema) {
     var classname;
-
-    schema = this.expandSchema(schema);
 
     $each(JSONEditor.defaults.resolvers,function(i,resolver) {
       var tmp = resolver(schema);

@@ -150,12 +150,13 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       holder = self.theme.getChildEditorHolder();
     }
     
-    var schema = $extend({}, self.schema.properties[name]);
-    var editor = self.jsoneditor.getEditorClass(schema);
+    var schema = self.schema.properties[name];
+    var expanded_schema = this.jsoneditor.expandSchema(schema);
+    var editor = self.jsoneditor.getEditorClass(expanded_schema);
     self.editor_holder.appendChild(holder);
     self.editors[name] = self.jsoneditor.createEditor(editor, $extend({
       jsoneditor: self.jsoneditor,
-      schema: schema,
+      schema: expanded_schema,
       path: self.path+'.'+name,
       parent: self,
       container: holder

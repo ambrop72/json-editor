@@ -138,7 +138,8 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     var schema = this.getItemSchema(i);
     schema.title = item_info.title+' '+(i+1);
 
-    var editor = this.jsoneditor.getEditorClass(schema);
+    var expanded_schema = this.jsoneditor.expandSchema(schema);
+    var editor = this.jsoneditor.getEditorClass(expanded_schema);
 
     var holder;
     if(item_info.child_editors) {
@@ -152,7 +153,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
 
     var ret = this.jsoneditor.createEditor(editor,{
       jsoneditor: this.jsoneditor,
-      schema: schema,
+      schema: expanded_schema,
       container: holder,
       path: this.path+'.'+i,
       parent: this,

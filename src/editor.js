@@ -24,9 +24,7 @@ JSONEditor.AbstractEditor = Class.extend({
     this.theme = this.jsoneditor.theme;
     this.template_engine = this.jsoneditor.template;
     this.iconlib = this.jsoneditor.iconlib;
-    
-    this.original_schema = options.schema;
-    this.schema = this.jsoneditor.expandSchema(this.original_schema);
+    this.schema = options.schema;
     
     this.options = $extend({}, (this.options || {}), (options.schema.options || {}), options);
     
