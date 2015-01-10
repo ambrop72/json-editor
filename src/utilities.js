@@ -121,3 +121,25 @@ var $trigger = function(el,event) {
 var $has = function(obj, property) {
   return obj.hasOwnProperty(property);
 };
+
+var $get = function(obj, property) {
+  return obj.hasOwnProperty(property) ? obj[property] : undefined;
+};
+
+var $getNested = function(obj) {
+  for (var i = 1; i < arguments.length; i++) {
+    if (!obj.hasOwnProperty(arguments[i])) {
+      return undefined;
+    }
+    obj = obj[arguments[i]];
+  }
+  return obj;
+};
+
+var $isUndefined = function(x) {
+  return (typeof x === 'undefined');
+};
+
+var $isObject = function(x) {
+  return (x !== null && typeof x === 'object');
+};

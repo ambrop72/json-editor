@@ -29,27 +29,14 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
     self.editor.container.style.display = '';
     
     self.refreshValue();
-    self.refreshHeaderText();
   },
   buildChildEditor: function(i) {
     var self = this;
-    var type = this.types[i];
+    
     var holder = self.theme.getChildEditorHolder();
     self.editor_holder.appendChild(holder);
 
-    var schema_ext = [];
-    if(typeof type === "string") {
-      schema_ext.push({type: type});
-    }
-    else {
-      schema_ext.push(type);
-
-      // If we need to merge `required` arrays
-      if(type.required && Array.isArray(type.required) && self.child_schema.required && Array.isArray(self.child_schema.required)) {
-        schema_ext.push({required: self.child_schema.required.concat(type.required)});
-      }
-    }
-    var schema = $extendPersistentArr(self.child_schema, schema_ext, 0);
+    var schema = self.child_schemas[i];
 
     var editor_class = self.jsoneditor.getEditorClass(schema);
 
@@ -63,56 +50,38 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
       no_label: true
     });
     self.editor.build();
-    
-    holder.addEventListener('change_header_text',function() {
-      self.refreshHeaderText();
-    });
   },
   buildImpl: function() {
     var self = this;
+    
+    // basic checks
+    if (!Array.isArray($get(this.schema, 'oneOf'))) {
+      throw "'multiple' editor requires an array 'oneOf'";
+    }
+    if (this.schema.oneOf.length === 0) {
+      throw "'multiple' editor requires non-empty 'oneOf'";
+    }
+    if (!$has(this.schema, 'selectKey')) {
+      throw "'multiple' editor requires 'selectKey'";
+    }
 
-    this.types = [];
+    this.child_schemas = this.schema.oneOf;
+    this.select_key = this.schema.selectKey;
     this.type = 0;
     this.editor = null;
-    this.validators = [];
     this.value = null;
-    this.child_schema = $shallowCopy(this.schema);
+    this.display_text = this.getDisplayText(this.child_schemas);
     
-    if(this.schema.oneOf) {
-      this.oneOf = true;
-      this.types = this.schema.oneOf;
-      $each(this.types,function(i,oneof) {
-        //self.types[i] = self.jsoneditor.expandSchema(oneof);
-      });
-      delete this.child_schema.oneOf;
-    }
-    else {
-      if(!this.schema.type || this.schema.type === "any") {
-        this.types = ['string','number','integer','boolean','object','array','null'];
-
-        // If any of these primitive types are disallowed
-        if(this.schema.disallow) {
-          var disallow = this.schema.disallow;
-          if(typeof disallow !== 'object' || !(Array.isArray(disallow))) {
-            disallow = [disallow];
-          }
-          var allowed_types = [];
-          $each(this.types,function(i,type) {
-            if(disallow.indexOf(type) === -1) allowed_types.push(type);
-          });
-          this.types = allowed_types;
-        }
+    // collect the values of the selectKey from the child schemas
+    this.select_values = [];
+    $each(this.child_schemas, function(i, schema) {
+      var selectValue = $getNested(schema, 'properties', self.select_key, 'constantValue');
+      if ($isUndefined(selectValue)) {
+        self.debugPrint(schema);
+        throw "'multiple' editor requires each 'oneOf' schema to have properties.(selectKey).constantValue";
       }
-      else if(Array.isArray(this.schema.type)) {
-        this.types = this.schema.type;
-      }
-      else {
-        this.types = [this.schema.type];
-      }
-      delete this.child_schema.type;
-    }
-
-    this.display_text = this.getDisplayText(this.types);
+      self.select_values.push(selectValue);
+    });
     
     var container = this.container;
 
@@ -138,37 +107,11 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
     this.editor_holder = document.createElement('div');
     container.appendChild(this.editor_holder);
 
-    this.switcher_options = this.theme.getSwitcherOptions(this.switcher);
-    $each(this.types,function(i,type) {
-      var schema_ext = [];
-      if(typeof type === "string") {
-        schema_ext.push({type: type});
-      }
-      else {
-        schema_ext.push(type);
-        
-        // If we need to merge `required` arrays
-        if(type.required && Array.isArray(type.required) && self.child_schema.required && Array.isArray(self.child_schema.required)) {
-          schema_ext.push({required: self.child_schema.required.concat(type.required)});
-        }
-      }
-      var schema = $extendPersistentArr(self.child_schema, schema_ext, 0);
-
-      self.validators[i] = new JSONEditor.Validator(self.jsoneditor,schema);
-    });
-    
     this.switchEditor(0);
   },
   onChildEditorChange: function(editor) {
     this.refreshValue();
-    this.refreshHeaderText();
     this.onChange();
-  },
-  refreshHeaderText: function() {
-    var display_text = this.getDisplayText(this.types);
-    $each(this.switcher_options, function(i,option) {
-      option.textContent = display_text[i];
-    });
   },
   refreshValue: function() {
     this.value = this.editor.getValue();
@@ -176,14 +119,17 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
   setValueImpl: function(val) {
     var self = this;
     
-    // Determine type by getting the first one that validates
+    // Determine the type by looking at the value of the selectKey property.
     var type = 0;
-    $each(this.validators, function(i,validator) {
-      if(!validator.validate(val).length) {
-        type = i;
-        return false;
-      }
-    });
+    if ($isObject(val) && $has(val, self.select_key)) {
+      var the_select_value = val[self.select_key];
+      $each(self.select_values, function(i, select_value) {
+        if (select_value === the_select_value) {
+          type = i;
+          return false;
+        }
+      });
+    }
     
     self.switcher.value = self.display_text[type];
     

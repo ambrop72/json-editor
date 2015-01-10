@@ -163,10 +163,6 @@ for(var i in JSONEditor.defaults.editors) {
 }
 
 // Set the default resolvers
-// Use "multiple" as a fall back for everything
-JSONEditor.defaults.resolvers.unshift(function(schema) {
-  if(typeof schema.type !== "string") return "multiple";
-});
 // If the type is set and it's a basic type, use the primitive editor
 JSONEditor.defaults.resolvers.unshift(function(schema) {
   // If the schema is a simple type
@@ -177,11 +173,6 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
   if(schema.type === 'boolean') {
     return "select";
   }
-});
-// Use the multiple editor for schemas where the `type` is set to "any"
-JSONEditor.defaults.resolvers.unshift(function(schema) {
-  // If the schema can be of any type
-  if(schema.type === "any") return "multiple";
 });
 // Use the table editor for arrays with the format set to `table`
 JSONEditor.defaults.resolvers.unshift(function(schema) {
