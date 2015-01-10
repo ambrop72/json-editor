@@ -1,11 +1,5 @@
 JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
   setValueImpl: function(value) {
-    if (this.template) {
-      return;
-    }
-    this.mySetValue(value, false);
-  },
-  mySetValue: function(value) {
     var self = this;
     
     if(value === null) value = "";
@@ -90,22 +84,15 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
 
     if(this.options.compact) this.container.setAttribute('class',this.container.getAttribute('class')+' compact');
 
-    if(this.schema.readOnly || this.schema.readonly || this.schema.template) {
+    if(this.schema.readOnly || this.schema.readonly) {
       this.always_disabled = true;
       this.input.disabled = true;
     }
 
-    this.input
-      .addEventListener('change',function(e) {        
+    this.input.addEventListener('change',function(e) {
         e.preventDefault();
         e.stopPropagation();
         
-        // Don't allow changing if this field is a template
-        if(self.schema.template) {
-          this.value = self.value;
-          return;
-        }
-
         var val = this.value;
         
         // sanitize value
@@ -124,11 +111,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     this.control = this.theme.getFormControl(this.label, this.input, this.description);
     this.container.appendChild(this.control);
 
-    // Compile and store the template
-    if(this.schema.template) {
-      this.template = this.jsoneditor.compileTemplate(this.schema.template, this.template_engine);
-    }
-    
     this.refreshValue();
     
     this.theme.afterInputReady(this.input);
@@ -148,7 +130,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     if(typeof this.value !== "string") this.value = '';
   },
   destroy: function() {
-    this.template = null;
     if(this.input && this.input.parentNode) this.input.parentNode.removeChild(this.input);
     if(this.label && this.label.parentNode) this.label.parentNode.removeChild(this.label);
     if(this.description && this.description.parentNode) this.description.parentNode.removeChild(this.description);
@@ -160,20 +141,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
    */
   sanitize: function(value) {
     return value;
-  },
-  /**
-   * Re-calculates the value if needed
-   */
-  onWatchedFieldChange: function() {    
-    var self = this, vars, j;
-    
-    // If this editor needs to be rendered by a macro template
-    if(this.template) {
-      vars = this.getWatchedFieldValues();
-      this.mySetValue(this.template(vars), false);
-    }
-    
-    this._super();
   },
   showValidationErrors: function(errors) {
     var self = this;
