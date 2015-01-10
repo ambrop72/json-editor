@@ -52,8 +52,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         this.description = this.theme.getDescription(this.schema.description);
         this.container.appendChild(this.description);
       }
-      this.error_holder = document.createElement('div');
-      this.container.appendChild(this.error_holder);
 
       this.panel = this.theme.getIndentedPanel();
       this.container.appendChild(this.panel);
@@ -402,42 +400,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       }, 'delete_all_rows_button_click');
     });
     self.controls.appendChild(this.remove_all_rows_button);
-  },
-  showValidationErrors: function(errors) {
-    var self = this;
-
-    // Get all the errors that pertain to this editor
-    var my_errors = [];
-    var other_errors = [];
-    $each(errors, function(i,error) {
-      if(error.path === self.path) {
-        my_errors.push(error);
-      }
-      else {
-        other_errors.push(error);
-      }
-    });
-
-    // Show errors for this editor
-    if(this.error_holder) {
-      if(my_errors.length) {
-        var message = [];
-        this.error_holder.innerHTML = '';
-        this.error_holder.style.display = '';
-        $each(my_errors, function(i,error) {
-          self.error_holder.appendChild(self.theme.getErrorMessage(error.message));
-        });
-      }
-      // Hide error area
-      else {
-        this.error_holder.style.display = 'none';
-      }
-    }
-
-    // Show errors for child editors
-    $each(this.rows, function(i,row) {
-      row.showValidationErrors(other_errors);
-    });
   },
   addRowButtonHandler: function() {
     var self = this;

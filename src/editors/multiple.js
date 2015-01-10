@@ -145,24 +145,5 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
     if(this.editor_holder && this.editor_holder.parentNode) this.editor_holder.parentNode.removeChild(this.editor_holder);
     if(this.switcher && this.switcher.parentNode) this.switcher.parentNode.removeChild(this.switcher);
     this._super();
-  },
-  showValidationErrors: function(errors) {
-    var self = this;
-    
-    // oneOf error paths need to remove the oneOf[i] part before passing to child editor
-    var new_errors = errors;
-    if (this.oneOf) {
-      var check = self.path+'.oneOf['+this.type+']';
-      new_errors = [];
-      $each(errors, function(j,error) {
-        if(error.path.substr(0,check.length)===check) {
-          var new_error = $extend({},error);
-          new_error.path = self.path+new_error.path.substr(check.length);
-          new_errors.push(new_error);
-        }
-      });
-    }
-    
-    this.editor.showValidationErrors(new_errors);
   }
 });

@@ -65,10 +65,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
         this.container.appendChild(this.description);
       }
       
-      // Validation error placeholder area
-      this.error_holder = document.createElement('div');
-      this.container.appendChild(this.error_holder);
-      
       // Container for child editor area
       this.editor_holder = this.theme.getIndentedPanel();
       this.editor_holder.style.paddingBottom = '0';
@@ -181,7 +177,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     });
     if(this.editor_holder) this.editor_holder.innerHTML = '';
     if(this.title && this.title.parentNode) this.title.parentNode.removeChild(this.title);
-    if(this.error_holder && this.error_holder.parentNode) this.error_holder.parentNode.removeChild(this.error_holder);
 
     this.editors = null;
     if(this.editor_holder && this.editor_holder.parentNode) this.editor_holder.parentNode.removeChild(this.editor_holder);
@@ -266,52 +261,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     this.refreshValue();
     this.layoutEditors();
     this.onChange();
-  },
-  showValidationErrors: function(errors) {
-    var self = this;
-
-    // Get all the errors that pertain to this editor
-    var my_errors = [];
-    var other_errors = [];
-    $each(errors, function(i,error) {
-      if(error.path === self.path) {
-        my_errors.push(error);
-      }
-      else {
-        other_errors.push(error);
-      }
-    });
-
-    // Show errors for this editor
-    if(this.error_holder) {
-      if(my_errors.length) {
-        var message = [];
-        this.error_holder.innerHTML = '';
-        this.error_holder.style.display = '';
-        $each(my_errors, function(i,error) {
-          self.error_holder.appendChild(self.theme.getErrorMessage(error.message));
-        });
-      }
-      // Hide error area
-      else {
-        this.error_holder.style.display = 'none';
-      }
-    }
-
-    // Show error for the table row if this is inside a table
-    if(this.options.table_row) {
-      if(my_errors.length) {
-        this.theme.addTableRowError(this.container);
-      }
-      else {
-        this.theme.removeTableRowError(this.container);
-      }
-    }
-
-    // Show errors for child editors
-    $each(this.editors, function(i,editor) {
-      editor.showValidationErrors(other_errors);
-    });
   },
   computeOrder: function() {
     var self = this;

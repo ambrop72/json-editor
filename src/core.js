@@ -9,7 +9,6 @@ JSONEditor.prototype = {
     
     this.destroyed = false;
     this.firing_change = false;
-    this.validation_pending = true;
     
     var theme_class = JSONEditor.defaults.themes[this.options.theme || JSONEditor.defaults.theme];
     if(!theme_class) throw "Unknown theme " + (this.options.theme || JSONEditor.defaults.theme);
@@ -26,8 +25,6 @@ JSONEditor.prototype = {
     
     this.translate = this.options.translate || JSONEditor.defaults.translate;
 
-    self.validator = new JSONEditor.Validator(self);
-    
     // Create the root editor
     var editor_class = self.getEditorClass(self.schema);
     self.root = self.createEditor(editor_class, {
@@ -42,10 +39,7 @@ JSONEditor.prototype = {
     // Starting data
     if(self.options.startval) self.root.setValue(self.options.startval);
 
-    // Do an initial validation.
-    self._maybeValidate();
-    
-    // Schedule a change event, while avoiding another validation.
+    // Schedule a change event.
     self._scheduleChange();
   },
   getValue: function() {
@@ -59,19 +53,6 @@ JSONEditor.prototype = {
     this.root.setValue(value);
     return this;
   },
-  validate: function(value) {
-    if(this.destroyed) throw "JSON Editor destroyed";
-    
-    // Custom value
-    if(arguments.length === 1) {
-      return this.validator.validate(value);
-    }
-    // Current value
-    else {
-      this._maybeValidate();
-      return this.validation_results;
-    }
-  },
   destroy: function() {
     if(this.destroyed) return;
     
@@ -80,8 +61,6 @@ JSONEditor.prototype = {
     this.root.destroy();
     this.root = null;
     this.root_container = null;
-    this.validator = null;
-    this.validation_results = null;
     this.theme = null;
     this.iconlib = null;
     this.template = null;
@@ -147,16 +126,6 @@ JSONEditor.prototype = {
     }
     return new editor_class(options);
   },
-  _maybeValidate: function() {
-    var self = this;
-    if (self.validation_pending) {
-      self.validation_results = self.validator.validate(self.root.getValue());
-      if(self.options.show_errors !== "never") {
-        self.root.showValidationErrors(self.validation_results);
-      }
-      self.validation_pending = false;
-    }
-  },
   _scheduleChange: function() {
     var self = this;
     
@@ -168,7 +137,6 @@ JSONEditor.prototype = {
     window.requestAnimationFrame(function() {
       if(self.destroyed) return;
       self.firing_change = false;
-      self._maybeValidate();
       self.trigger('change');
     });
   },
@@ -177,7 +145,6 @@ JSONEditor.prototype = {
     if (self.destroyed) {
       return;
     }
-    self.validation_pending = true;
     self._scheduleChange();
   },
   compileTemplate: function(template, name) {
@@ -263,5 +230,4 @@ JSONEditor.defaults = {
   editors: {},
   languages: {},
   resolvers: [],
-  custom_validators: []
 };

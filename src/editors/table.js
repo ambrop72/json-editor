@@ -31,8 +31,6 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
       }
       this.panel = this.theme.getIndentedPanel();
       this.container.appendChild(this.panel);
-      this.error_holder = document.createElement('div');
-      this.panel.appendChild(this.error_holder);
     }
     else {
       this.panel = document.createElement('div');

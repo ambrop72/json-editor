@@ -17,16 +17,10 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     
     this.refreshValue();
     
-    if(this.initial) this.is_dirty = false;
-    else if(this.jsoneditor.options.show_errors === "change") this.is_dirty = true;
-    this.initial = false;
-
     this.onChange();
   },
   buildImpl: function() {
     var self = this, i;
-    
-    this.initial = true;
     
     if(!this.options.compact) this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
     if(this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
@@ -102,7 +96,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
         }
         
         self.withProcessingContext(function() {
-          self.is_dirty = true;
           self.refreshValue();
           self.onChange();
         }, 'input_change');
@@ -141,27 +134,5 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
    */
   sanitize: function(value) {
     return value;
-  },
-  showValidationErrors: function(errors) {
-    var self = this;
-    
-    if(this.jsoneditor.options.show_errors === "always") {}
-    else if(!this.is_dirty) return;
-    
-    
-
-    var messages = [];
-    $each(errors,function(i,error) {
-      if(error.path === self.path) {
-        messages.push(error.message);
-      }
-    });
-
-    if(messages.length) {
-      this.theme.addInputError(this.input, messages.join('. ')+'.');
-    }
-    else {
-      this.theme.removeInputError(this.input);
-    }
   }
 });
