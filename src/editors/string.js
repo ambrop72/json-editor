@@ -124,20 +124,14 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     this.control = this.theme.getFormControl(this.label, this.input, this.description);
     this.container.appendChild(this.control);
 
-    // Any special formatting that needs to happen after the input is added to the dom
-    window.requestAnimationFrame(function() {
-      // Skip in case the input is only a temporary editor,
-      // otherwise, in the case of an ace_editor creation,
-      // it will generate an error trying to append it to the missing parentNode
-      if(self.input.parentNode) self.afterInputReady();
-    });
-
     // Compile and store the template
     if(this.schema.template) {
       this.template = this.jsoneditor.compileTemplate(this.schema.template, this.template_engine);
     }
     
     this.refreshValue();
+    
+    this.theme.afterInputReady(this.input);
   },
   enable: function() {
     if(!this.always_disabled) {
@@ -148,10 +142,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
   disable: function() {
     this.input.disabled = true;
     this._super();
-  },
-  afterInputReady: function() {
-    var self = this;
-    self.theme.afterInputReady(self.input);
   },
   refreshValue: function() {
     this.value = this.input.value;
