@@ -103,15 +103,15 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
           return {};
         }
         else if(this.schema.additionalItems) {
-          return $extend({},this.schema.additionalItems);
+          return this.schema.additionalItems;
         }
       }
       else {
-        return $extend({},this.schema.items[i]);
+        return this.schema.items[i];
       }
     }
     else if(this.schema.items) {
-      return $extend({},this.schema.items);
+      return this.schema.items;
     }
     else {
       return {};
@@ -136,10 +136,9 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   getElementEditor: function(i) {
     var item_info = this.getItemInfo(i);
     var schema = this.getItemSchema(i);
-    schema.title = item_info.title+' '+(i+1);
+    schema = $extendPersistent(schema, {title: item_info.title+' '+(i+1)});
 
-    var expanded_schema = this.jsoneditor.expandSchema(schema);
-    var editor = this.jsoneditor.getEditorClass(expanded_schema);
+    var editor = this.jsoneditor.getEditorClass(schema);
 
     var holder;
     if(item_info.child_editors) {
@@ -153,7 +152,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
 
     var ret = this.jsoneditor.createEditor(editor,{
       jsoneditor: this.jsoneditor,
-      schema: expanded_schema,
+      schema: schema,
       container: holder,
       path: this.path+'.'+i,
       parent: this,

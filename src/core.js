@@ -1,7 +1,6 @@
 var JSONEditor = function(element,options) {
-  options = $extend({},JSONEditor.defaults.options,options||{});
   this.element = element;
-  this.options = options;
+  this.options = $extendPersistent(JSONEditor.defaults.options, options || {});
   this.init();
 };
 JSONEditor.prototype = {
@@ -30,11 +29,10 @@ JSONEditor.prototype = {
     self.validator = new JSONEditor.Validator(self);
     
     // Create the root editor
-    var expanded_schema = self.expandSchema(self.schema);
-    var editor_class = self.getEditorClass(expanded_schema);
+    var editor_class = self.getEditorClass(self.schema);
     self.root = self.createEditor(editor_class, {
       jsoneditor: self,
-      schema: expanded_schema,
+      schema: self.schema,
       required: true,
       container: self.root_container
     });
@@ -155,7 +153,9 @@ JSONEditor.prototype = {
     return JSONEditor.defaults.editors[classname];
   },
   createEditor: function(editor_class, options) {
-    options = $extend({},editor_class.options||{},options);
+    if (editor_class.options) {
+      options = $extendPersistent(editor_class.options, options);
+    }
     return new editor_class(options);
   },
   onChange: function() {
@@ -276,9 +276,6 @@ JSONEditor.prototype = {
   },
   disable: function() {
     this.root.disable();
-  },
-  expandSchema: function(schema) {
-    return $extend({}, schema);
   }
 };
 

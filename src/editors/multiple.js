@@ -37,27 +37,25 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
     var holder = self.theme.getChildEditorHolder();
     self.editor_holder.appendChild(holder);
 
-    var schema;
-    
+    var schema_ext = [];
     if(typeof type === "string") {
-      schema = $extend({},self.schema);
-      schema.type = type;
+      schema_ext.push({type: type});
     }
     else {
-      schema = $extend({},self.schema,type);
+      schema_ext.push(type);
 
       // If we need to merge `required` arrays
-      if(type.required && Array.isArray(type.required) && self.schema.required && Array.isArray(self.schema.required)) {
-        schema.required = self.schema.required.concat(type.required);
+      if(type.required && Array.isArray(type.required) && self.child_schema.required && Array.isArray(self.child_schema.required)) {
+        schema_ext.push({required: self.child_schema.required.concat(type.required)});
       }
     }
+    var schema = $extendPersistentArr(self.child_schema, schema_ext, 0);
 
-    var expanded_schema = this.jsoneditor.expandSchema(schema);
-    var editor_class = self.jsoneditor.getEditorClass(expanded_schema);
+    var editor_class = self.jsoneditor.getEditorClass(schema);
 
     self.editor = self.jsoneditor.createEditor(editor_class,{
       jsoneditor: self.jsoneditor,
-      schema: expanded_schema,
+      schema: schema,
       container: holder,
       path: self.path,
       parent: self,
@@ -81,14 +79,15 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
     this.editor = null;
     this.validators = [];
     this.value = null;
-
+    this.child_schema = $shallowCopy(this.schema);
+    
     if(this.schema.oneOf) {
       this.oneOf = true;
       this.types = this.schema.oneOf;
       $each(this.types,function(i,oneof) {
         //self.types[i] = self.jsoneditor.expandSchema(oneof);
       });
-      delete this.schema.oneOf;
+      delete this.child_schema.oneOf;
     }
     else {
       if(!this.schema.type || this.schema.type === "any") {
@@ -113,7 +112,7 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
       else {
         this.types = [this.schema.type];
       }
-      delete this.schema.type;
+      delete this.child_schema.type;
     }
 
     this.display_text = this.getDisplayText(this.types);
@@ -144,20 +143,19 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
 
     this.switcher_options = this.theme.getSwitcherOptions(this.switcher);
     $each(this.types,function(i,type) {
-      var schema;
-      
+      var schema_ext = [];
       if(typeof type === "string") {
-        schema = $extend({},self.schema);
-        schema.type = type;
+        schema_ext.push({type: type});
       }
       else {
-        schema = $extend({},self.schema,type);
-
+        schema_ext.push(type);
+        
         // If we need to merge `required` arrays
-        if(type.required && Array.isArray(type.required) && self.schema.required && Array.isArray(self.schema.required)) {
-          schema.required = self.schema.required.concat(type.required);
+        if(type.required && Array.isArray(type.required) && self.child_schema.required && Array.isArray(self.child_schema.required)) {
+          schema_ext.push({required: self.child_schema.required.concat(type.required)});
         }
       }
+      var schema = $extendPersistentArr(self.child_schema, schema_ext, 0);
 
       self.validators[i] = new JSONEditor.Validator(self.jsoneditor,schema);
     });

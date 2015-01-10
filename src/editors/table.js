@@ -77,8 +77,7 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
   },
   getElementEditor: function(i) {
     var schema = this.schema.items;
-    var expanded_schema = this.jsoneditor.expandSchema(schema);
-    var editor = this.jsoneditor.getEditorClass(expanded_schema);
+    var editor = this.jsoneditor.getEditorClass(schema);
     var row = this.row_holder.appendChild(this.theme.getTableRow());
     var holder = row;
     if(!this.item_has_child_editors) {
@@ -88,7 +87,7 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
 
     var ret = this.jsoneditor.createEditor(editor,{
       jsoneditor: this.jsoneditor,
-      schema: expanded_schema,
+      schema: schema,
       container: holder,
       path: this.path+'.'+i,
       parent: this,

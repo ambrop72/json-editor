@@ -26,9 +26,8 @@ JSONEditor.AbstractEditor = Class.extend({
     this.iconlib = this.jsoneditor.iconlib;
     this.schema = options.schema;
     
-    this.options = $extend({}, (this.options || {}), (options.schema.options || {}), options);
+    this.options = $extendPersistent((options.schema.options || {}), options);
     
-    if(!options.path && !this.schema.id) this.schema.id = 'root';
     this.path = options.path || 'root';
     this.formname = options.formname || this.path.replace(/\.([^.]+)/g,'[$1]');
     if(this.jsoneditor.options.form_name_root) this.formname = this.formname.replace(/^root\[/,this.jsoneditor.options.form_name_root+'[');
@@ -62,7 +61,6 @@ JSONEditor.AbstractEditor = Class.extend({
     
     // Watched fields
     this.watched = {};
-    if(this.schema.vars) this.schema.watch = this.schema.vars;
     this.watched_values = {};
     this.watch_listener = function() {
       self.withProcessingContext(function() {
@@ -171,7 +169,7 @@ JSONEditor.AbstractEditor = Class.extend({
   onWatchedFieldChange: function() {
     var vars;
     if(this.header_template) {      
-      vars = $extend(this.getWatchedFieldValues(),{
+      vars = $extendPersistent(this.getWatchedFieldValues(), {
         key: this.key,
         i: this.key,
         i0: (this.key*1),

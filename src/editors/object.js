@@ -44,7 +44,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     this.editors = {};
     var self = this;
 
-    this.schema.properties = this.schema.properties || {};
+    this.schema_properties = this.schema.properties || {};
 
     // If the object should be rendered as a table row
     if(this.options.table_row) {
@@ -52,7 +52,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     }
     // If the object should be rendered as a div
     else {
-      this.defaultProperties = this.schema.defaultProperties || Object.keys(this.schema.properties);
+      this.defaultProperties = this.schema.defaultProperties || Object.keys(this.schema_properties);
 
       this.header = document.createElement('span');
       this.header.textContent = this.getTitle();
@@ -150,13 +150,12 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       holder = self.theme.getChildEditorHolder();
     }
     
-    var schema = self.schema.properties[name];
-    var expanded_schema = this.jsoneditor.expandSchema(schema);
-    var editor = self.jsoneditor.getEditorClass(expanded_schema);
+    var schema = self.schema_properties[name];
+    var editor = self.jsoneditor.getEditorClass(schema);
     self.editor_holder.appendChild(holder);
-    self.editors[name] = self.jsoneditor.createEditor(editor, $extend({
+    self.editors[name] = self.jsoneditor.createEditor(editor, $extendPersistent({
       jsoneditor: self.jsoneditor,
-      schema: expanded_schema,
+      schema: schema,
       path: self.path+'.'+name,
       parent: self,
       container: holder
@@ -234,7 +233,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
 
     // For the initial value, we need to make sure we actually have the editors.
     if (initial) {
-      $each(self.schema.properties, function(i, schema) {
+      $each(self.schema_properties, function(i, schema) {
         if (!self.editors.hasOwnProperty(i)) {
           setActions.push({name: i});
         }
@@ -245,8 +244,8 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     $each(setActions, function(ind,action) {
       var i = action.name;
       action.processingOrder = 0;
-      if (self.schema.properties && self.schema.properties[i] && typeof self.schema.properties[i].processingOrder !== "undefined") {
-        action.processingOrder = self.schema.properties[i].processingOrder;
+      if (self.schema_properties && self.schema_properties[i] && typeof self.schema_properties[i].processingOrder !== "undefined") {
+        action.processingOrder = self.schema_properties[i].processingOrder;
       }
     });
     
