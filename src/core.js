@@ -134,11 +134,11 @@ JSONEditor.prototype = {
     }
     self.firing_change = true;
     
-    window.requestAnimationFrame(function() {
+    window.setTimeout(function() {
       if(self.destroyed) return;
       self.firing_change = false;
       self.trigger('change');
-    });
+    }, 0);
   },
   onChange: function() {
     var self = this;
