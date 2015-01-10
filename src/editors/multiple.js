@@ -59,13 +59,10 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
       container: holder,
       path: self.path,
       parent: self,
-      required: true
+      required: true,
+      no_label: true
     });
     self.editor.build();
-    
-    if(self.editor.header) self.editor.header.style.display = 'none';
-    
-    self.editor.option = self.switcher_options[i];
     
     holder.addEventListener('change_header_text',function() {
       self.refreshHeaderText();

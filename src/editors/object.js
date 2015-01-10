@@ -50,12 +50,12 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     else {
       this.defaultProperties = this.schema.defaultProperties || Object.keys(this.schema_properties);
 
+      // Text label
       this.header = document.createElement('span');
       this.header.textContent = this.getTitle();
+      
+      // Container for the entire header row.
       this.title = this.theme.getHeader(this.header);
-      if (this.options.no_header) {
-        this.title.style.display = 'none';
-      }
       this.container.appendChild(this.title);
       this.container.style.position = 'relative';
       
@@ -106,12 +106,19 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
         $trigger(this.toggle_button,'click');
       }
       
-      // Collapse button disabled
-      if(this.schema.options && typeof this.schema.options.disable_collapse !== "undefined") {
-        if(this.schema.options.disable_collapse) this.toggle_button.style.display = 'none';
-      }
-      else if(this.jsoneditor.options.disable_collapse) {
-        this.toggle_button.style.display = 'none';
+      // Disable controls as needed.
+      var label_hidden = !!this.options.no_label;
+      var collapse_hidden = this.jsoneditor.options.disable_collapse ||
+        (this.schema.options && typeof this.schema.options.disable_collapse !== "undefined");
+      if (this.options.no_header || (label_hidden && collapse_hidden)) {
+        this.title.style.display = 'none';
+      } else {
+        if (label_hidden) {
+          this.header.style.display = 'none';
+        }
+        if (collapse_hidden) {
+          this.title_controls.style.display = 'none';
+        }
       }
     }
     
