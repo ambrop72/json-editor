@@ -2,7 +2,7 @@
 JSONEditor.defaults.theme = 'html';
 
 // Set the default template engine
-JSONEditor.defaults.template = 'default';
+JSONEditor.defaults.template = 'javascript';
 
 // Default options when initializing JSON Editor
 JSONEditor.defaults.options = {};
