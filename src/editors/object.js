@@ -4,20 +4,16 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   },
   enable: function() {
     this._super();
-    if(this.editors) {
-      for(var i in this.editors) {
-        if(!this.editors.hasOwnProperty(i)) continue;
-        this.editors[i].enable();
-      }
+    for(var i in this.editors) {
+      if(!this.editors.hasOwnProperty(i)) continue;
+      this.editors[i].enable();
     }
   },
   disable: function() {
     this._super();
-    if(this.editors) {
-      for(var i in this.editors) {
-        if(!this.editors.hasOwnProperty(i)) continue;
-        this.editors[i].disable();
-      }
+    for(var i in this.editors) {
+      if(!this.editors.hasOwnProperty(i)) continue;
+      this.editors[i].disable();
     }
   },
   layoutEditors: function() {
