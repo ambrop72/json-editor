@@ -329,7 +329,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     }
 
     if(i<=0) return;
-    var rows = self.getValue();
+    var rows = self.value.slice();
     var tmp = rows[i-1];
     rows[i-1] = rows[i];
     rows[i] = tmp;
