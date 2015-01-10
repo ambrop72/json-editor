@@ -7,16 +7,16 @@ JSONEditor.prototype = {
   init: function() {
     var self = this;
     
-    this.ready = false;
-
+    this.destroyed = false;
+    this.firing_change = false;
+    this.validation_pending = true;
+    
     var theme_class = JSONEditor.defaults.themes[this.options.theme || JSONEditor.defaults.theme];
     if(!theme_class) throw "Unknown theme " + (this.options.theme || JSONEditor.defaults.theme);
     
     this.schema = this.options.schema;
     this.theme = new theme_class();
     this.template = this.options.template;
-    this.uuid = 0;
-    this.__data = {};
     
     var icon_class = JSONEditor.defaults.iconlibs[this.options.iconlib || JSONEditor.defaults.iconlib];
     if(icon_class) this.iconlib = new icon_class();
@@ -42,47 +42,38 @@ JSONEditor.prototype = {
     // Starting data
     if(self.options.startval) self.root.setValue(self.options.startval);
 
-    self.validation_results = self.validator.validate(self.root.getValue());
-    self.root.showValidationErrors(self.validation_results);
-    self.ready = true;
-
-    // Fire ready event asynchronously
-    window.requestAnimationFrame(function() {
-      if (!self.ready) {
-        return;
-      }
-      self.validation_results = self.validator.validate(self.root.getValue());
-      self.root.showValidationErrors(self.validation_results);
-      self.trigger('ready');
-      self.trigger('change');
-    });
+    // Do an initial validation.
+    self._maybeValidate();
+    
+    // Schedule a change event, while avoiding another validation.
+    self._scheduleChange();
   },
   getValue: function() {
-    if(!this.ready) throw "JSON Editor not ready yet.  Listen for 'ready' event before getting the value";
+    if(this.destroyed) throw "JSON Editor destroyed";
 
     return this.root.getFinalValue();
   },
   setValue: function(value) {
-    if(!this.ready) throw "JSON Editor not ready yet.  Listen for 'ready' event before setting the value";
-
+    if(this.destroyed) throw "JSON Editor destroyed";
+    
     this.root.setValue(value);
     return this;
   },
   validate: function(value) {
-    if(!this.ready) throw "JSON Editor not ready yet.  Listen for 'ready' event before validating";
+    if(this.destroyed) throw "JSON Editor destroyed";
     
     // Custom value
     if(arguments.length === 1) {
       return this.validator.validate(value);
     }
-    // Current value (use cached result)
+    // Current value
     else {
+      this._maybeValidate();
       return this.validation_results;
     }
   },
   destroy: function() {
     if(this.destroyed) return;
-    if(!this.ready) return;
     
     this.schema = null;
     this.options = null;
@@ -94,8 +85,6 @@ JSONEditor.prototype = {
     this.theme = null;
     this.iconlib = null;
     this.template = null;
-    this.__data = null;
-    this.ready = false;
     this.element.innerHTML = '';
     
     this.destroyed = true;
@@ -158,28 +147,38 @@ JSONEditor.prototype = {
     }
     return new editor_class(options);
   },
-  onChange: function() {
-    if(!this.ready) return;
-    
-    if(this.firing_change) return;
-    this.firing_change = true;
-    
+  _maybeValidate: function() {
     var self = this;
-    
-    window.requestAnimationFrame(function() {
-      self.firing_change = false;
-      if(!self.ready) return;
-
-      // Validate and cache results
+    if (self.validation_pending) {
       self.validation_results = self.validator.validate(self.root.getValue());
-      
       if(self.options.show_errors !== "never") {
         self.root.showValidationErrors(self.validation_results);
       }
-      
-      // Fire change event
+      self.validation_pending = false;
+    }
+  },
+  _scheduleChange: function() {
+    var self = this;
+    
+    if (self.firing_change) {
+      return;
+    }
+    self.firing_change = true;
+    
+    window.requestAnimationFrame(function() {
+      if(self.destroyed) return;
+      self.firing_change = false;
+      self._maybeValidate();
       self.trigger('change');
     });
+  },
+  onChange: function() {
+    var self = this;
+    if (self.destroyed) {
+      return;
+    }
+    self.validation_pending = true;
+    self._scheduleChange();
   },
   compileTemplate: function(template, name) {
     name = name || JSONEditor.defaults.template;
@@ -202,28 +201,6 @@ JSONEditor.prototype = {
     if(!engine.compile) throw "Invalid template engine set";
 
     return engine.compile(template);
-  },
-  _data: function(el,key,value) {
-    // Setting data
-    if(arguments.length === 3) {
-      var uuid;
-      if(el.hasAttribute('data-jsoneditor-'+key)) {
-        uuid = el.getAttribute('data-jsoneditor-'+key);
-      }
-      else {
-        uuid = this.uuid++;
-        el.setAttribute('data-jsoneditor-'+key,uuid);
-      }
-
-      this.__data[uuid] = value;
-    }
-    // Getting data
-    else {
-      // No data stored
-      if(!el.hasAttribute('data-jsoneditor-'+key)) return null;
-      
-      return this.__data[el.getAttribute('data-jsoneditor-'+key)];
-    }
   },
   registerEditor: function(editor) {
     this.editors = this.editors || {};
