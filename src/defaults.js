@@ -207,9 +207,9 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
   // If this schema uses `oneOf`
   if(schema.oneOf) return "multiple";
 });
-// Use the `derived` editor if requested.
+// Use the `derived` editor if it has the right config.
 JSONEditor.defaults.resolvers.unshift(function(schema) {
-  if(schema.options && schema.options.derived === true) {
-      return "derived";
+  if($has(schema, 'valueTemplate') || $has(schema, 'constantValue')) {
+    return "derived";
   }
 });

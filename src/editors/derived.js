@@ -1,16 +1,15 @@
 JSONEditor.defaults.editors.derived = JSONEditor.AbstractEditor.extend({
     buildImpl: function() {
         this.always_disabled = true;
-        if (!this.schema.template && !this.schema.hasOwnProperty('constantValue')) {
-            throw "'derived' editor requires the template or constantValue property to be set.";
-        }
-        if (this.schema.template) {
+        if ($has(this.schema, 'valueTemplate')) {
             this.derived_mode = 'template';
-            this.template = this.jsoneditor.compileTemplate(this.schema.template, this.template_engine);
+            this.template = this.jsoneditor.compileTemplate(this.schema.valueTemplate, this.template_engine);
             this.myValue = null;
-        } else {
+        } else if ($has(this.schema, 'constantValue')) {
             this.derived_mode = 'constant';
             this.myValue = this.schema.constantValue;
+        } else {
+            throw "'derived' editor requires the valueTemplate or constantValue property to be set.";
         }
     },
     destroy: function() {
