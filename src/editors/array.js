@@ -87,61 +87,19 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   },
   getItemTitle: function() {
     if(!this.item_title) {
-      if(this.schema.items && !Array.isArray(this.schema.items)) {
-        this.item_title = this.schema.items.title || 'item';
-      }
-      else {
-        this.item_title = 'item';
-      }
+      this.item_title = this.schema.items.title || 'item';
     }
     return this.item_title;
   },
-  getItemSchema: function(i) {
-    if(Array.isArray(this.schema.items)) {
-      if(i >= this.schema.items.length) {
-        if(this.schema.additionalItems===true) {
-          return {};
-        }
-        else if(this.schema.additionalItems) {
-          return this.schema.additionalItems;
-        }
-      }
-      else {
-        return this.schema.items[i];
-      }
-    }
-    else if(this.schema.items) {
-      return this.schema.items;
-    }
-    else {
-      return {};
-    }
-  },
-  getItemInfo: function(i) {
-    var schema = this.getItemSchema(i);
-    
-    // Check if it's cached
-    this.item_info = this.item_info || {};
-    var stringified = JSON.stringify(schema);
-    if(typeof this.item_info[stringified] !== "undefined") return this.item_info[stringified];
-    
-    this.item_info[stringified] = {
-      title: schema.title || "item",
-      'default': schema.default,
-      child_editors: schema.properties || schema.items
-    };
-    
-    return this.item_info[stringified];
-  },
   getElementEditor: function(i) {
-    var item_info = this.getItemInfo(i);
-    var schema = this.getItemSchema(i);
-    schema = $extendPersistent(schema, {title: item_info.title+' '+(i+1)});
+    var schema = $extendPersistent(this.schema.items, {
+      title: this.getItemTitle() + ' ' + (i + 1)
+    });
 
     var editor = this.jsoneditor.getEditorClass(schema);
 
     var holder;
-    if(item_info.child_editors) {
+    if(schema.properties || schema.items) {
       holder = this.theme.getChildEditorHolder();
     }
     else {
@@ -193,33 +151,12 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     row.destroy();
     if(holder.parentNode) holder.parentNode.removeChild(holder);
   },
-  getMax: function() {
-    if((Array.isArray(this.schema.items)) && this.schema.additionalItems === false) {
-      return Math.min(this.schema.items.length,this.schema.maxItems || Infinity);
-    }
-    else {
-      return this.schema.maxItems || Infinity;
-    }
-  },
   setValueImpl: function(value) {
     // Update the array's value, adding/removing rows when necessary
     value = value || [];
     
     if(!(Array.isArray(value))) value = [value];
     
-    var serialized = JSON.stringify(value);
-    if(serialized === this.serialized) return;
-
-    // Make sure value has between minItems and maxItems items in it
-    if(this.schema.minItems) {
-      while(value.length < this.schema.minItems) {
-        value.push(this.getItemInfo(value.length).default);
-      }
-    }
-    if(this.getMax() && value.length > this.getMax()) {
-      value = value.slice(0,this.getMax());
-    }
-
     var self = this;
     $each(value,function(i,val) {
       if (self.rows[i]) {
@@ -268,9 +205,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   refreshButtons: function() {
     var self = this;
     
-    // If we currently have minItems items in the array
-    var minItems = this.schema.minItems && this.schema.minItems >= this.rows.length;
-    
     var need_row_buttons = false;
     $each(this.rows,function(i,editor) {
       // Hide the move down button for the last row
@@ -284,15 +218,9 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         }
       }
 
-      // Hide the delete button if we have minItems items
       if(editor.delete_button) {
-        if(minItems) {
-          editor.delete_button.style.display = 'none';
-        }
-        else {
-          need_row_buttons = true;
-          editor.delete_button.style.display = '';
-        }
+        need_row_buttons = true;
+        editor.delete_button.style.display = '';
       }
       
       if (self.refreshButtonsExtraEditor(i, editor)) {
@@ -302,21 +230,15 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     
     var controls_needed = false;
     
-    if (this.rows.length === 0 || minItems || this.hide_delete_buttons) {
+    if (this.rows.length === 0 || this.hide_delete_buttons) {
       this.remove_all_rows_button.style.display = 'none';
     } else {
       this.remove_all_rows_button.style.display = '';
       controls_needed = true;
     }
 
-    // If there are maxItems in the array, hide the add button beneath the rows
-    if((this.getMax() && this.getMax() <= this.rows.length) || this.hide_add_button){
-      this.add_row_button.style.display = 'none';
-    }
-    else {
-      this.add_row_button.style.display = '';
-      controls_needed = true;
-    } 
+    this.add_row_button.style.display = '';
+    controls_needed = true;
     
     self.refreshButtonsExtra(need_row_buttons, controls_needed);
   },

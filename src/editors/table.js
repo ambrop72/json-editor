@@ -116,25 +116,11 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     // Update the array's value, adding/removing rows when necessary
     value = value || [];
 
-    // Make sure value has between minItems and maxItems items in it
-    if(this.schema.minItems) {
-      while(value.length < this.schema.minItems) {
-        value.push(this.getItemDefault());
-      }
-    }
-    if(this.schema.maxItems && value.length > this.schema.maxItems) {
-      value = value.slice(0,this.schema.maxItems);
-    }
-    
-    var serialized = JSON.stringify(value);
-    if(serialized === this.serialized) return;
-
     var numrows_changed = false;
 
     var self = this;
     $each(value,function(i,val) {
       if(self.rows[i]) {
-        // TODO: don't set the row's value if it hasn't changed
         self.rows[i].setValue(val);
       }
       else {
@@ -194,7 +180,6 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
       // Get the value for this editor
       self.value[i] = editor.getValue();
     });
-    this.serialized = JSON.stringify(this.value);
   },
   addRow: function(value) {
     this.addRowBase(value, false, function(row) { return row.table_controls; });
