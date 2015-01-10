@@ -26,8 +26,6 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
 
     self.editor.setValue(self.value);
     
-    self.editor.container.style.display = '';
-    
     self.refreshValue();
   },
   buildChildEditor: function(i) {
@@ -70,10 +68,11 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
     this.type = 0;
     this.editor = null;
     this.value = null;
-    this.display_text = this.getDisplayText(this.child_schemas);
-    
-    // collect the values of the selectKey from the child schemas
     this.select_values = [];
+    
+    var select_titles = [];
+    var select_indices = [];
+    
     $each(this.child_schemas, function(i, schema) {
       var selectValue = $getNested(schema, 'properties', self.select_key, 'constantValue');
       if ($isUndefined(selectValue)) {
@@ -81,6 +80,9 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
         throw "'multiple' editor requires each 'oneOf' schema to have properties.(selectKey).constantValue";
       }
       self.select_values.push(selectValue);
+      select_indices.push(i);
+      var title = $has(schema, 'title') ? schema.title : selectValue;
+      select_titles.push(title);
     });
     
     var container = this.container;
@@ -88,14 +90,15 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
     this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
     this.container.appendChild(this.header);
 
-    this.switcher = this.theme.getSwitcher(this.display_text);
+    this.switcher = this.theme.getSwitcher(select_indices);
+    this.theme.setSwitcherOptions(this.switcher, select_indices, select_titles);
     container.appendChild(this.switcher);
     this.switcher.addEventListener('change',function(e) {
       e.preventDefault();
       e.stopPropagation();
       
       self.withProcessingContext(function() {
-        self.switchEditor(self.display_text.indexOf(self.switcher.value));
+        self.switchEditor(self.switcher.value);
         self.onChange();
       }, 'switcher_input');
     });
@@ -131,7 +134,7 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
       });
     }
     
-    self.switcher.value = self.display_text[type];
+    self.switcher.value = type;
     
     this.value = val;
     this.switchEditor(type);
