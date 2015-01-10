@@ -15,24 +15,6 @@ var $isplainobject = function( obj ) {
   return key === undefined || obj.hasOwnProperty(key);
 };
 
-var $extend = function(destination) {
-  var source, i,property;
-  for(i=1; i<arguments.length; i++) {
-    source = arguments[i];
-    for (property in source) {
-      if(!source.hasOwnProperty(property)) continue;
-      if(source[property] && $isplainobject(source[property])) {
-        if(!destination.hasOwnProperty(property)) destination[property] = {};
-        $extend(destination[property], source[property]);
-      }
-      else {
-        destination[property] = source[property];
-      }
-    }
-  }
-  return destination;
-};
-
 var $shallowCopy = function(obj) {
   var res = {};
   for (var property in obj) {

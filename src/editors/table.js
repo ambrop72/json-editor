@@ -67,9 +67,6 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     // Set initial value.
     this.setValueImpl([]);
   },
-  getItemDefault: function() {
-    return $extend({},{default:this.item_default}).default;
-  },
   getItemTitle: function() {
     return this.item_title;
   },
