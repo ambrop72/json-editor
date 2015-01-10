@@ -117,11 +117,3 @@ var $trigger = function(el,event) {
   e.initEvent(event, true, true);
   el.dispatchEvent(e);
 };
-var $triggerc = function(el,event) {
-  var e = new CustomEvent(event,{
-    bubbles: true,
-    cancelable: true
-  });
-
-  el.dispatchEvent(e);
-};

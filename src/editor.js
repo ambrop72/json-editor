@@ -25,23 +25,22 @@ JSONEditor.AbstractEditor = Class.extend({
     this.template_engine = this.jsoneditor.template;
     this.iconlib = this.jsoneditor.iconlib;
     this.schema = options.schema;
-    
     this.options = $extendPersistent((options.schema.options || {}), options);
-    
     this.path = options.path || 'root';
     this.formname = options.formname || this.path.replace(/\.([^.]+)/g,'[$1]');
     if(this.jsoneditor.options.form_name_root) this.formname = this.formname.replace(/^root\[/,this.jsoneditor.options.form_name_root+'[');
     this.key = this.path.split('.').pop();
     this.parent = options.parent;
     this.watch_id = this.schema.id || null;
+    this.container = options.container || null;
+    this.header_template = null;
+    if(this.schema.headerTemplate) {
+      this.header_template = this.jsoneditor.compileTemplate(this.schema.headerTemplate, this.template_engine);
+    }
     
     this.processing_active = false;
     this.processing_dirty = false;
     this.processing_watch_dirty = false;
-    
-    if (options.container) {
-      this.container = options.container;
-    }
   },
   debugPrint: function(msg) {
     console.log(this.path + ': ' + msg);
@@ -97,11 +96,6 @@ JSONEditor.AbstractEditor = Class.extend({
         
         self.watched[name] = adjusted_path;
       }
-    }
-    
-    // Dynamic header
-    if(this.schema.headerTemplate) {
-      this.header_template = this.jsoneditor.compileTemplate(this.schema.headerTemplate, this.template_engine);
     }
   },
   getButton: function(text, icon, title) {
@@ -244,9 +238,6 @@ JSONEditor.AbstractEditor = Class.extend({
   },
   getFinalValue: function() {
     return this.getValue();
-  },
-  refreshValue: function() {
-
   },
   destroy: function() {
     var self = this;

@@ -156,22 +156,6 @@ JSONEditor.defaults.languages.en = {
   error_dependency: "Must have property {{0}}"
 };
 
-// Miscellaneous Plugin Settings
-JSONEditor.plugins = {
-  ace: {
-    theme: ''
-  },
-  epiceditor: {
-
-  },
-  sceditor: {
-
-  },
-  select2: {
-    
-  }
-};
-
 // Default per-editor options
 for(var i in JSONEditor.defaults.editors) {
   if(!JSONEditor.defaults.editors.hasOwnProperty(i)) continue;
