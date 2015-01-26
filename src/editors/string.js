@@ -76,7 +76,9 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     if(typeof this.schema.pattern !== "undefined") this.input.setAttribute('pattern',this.schema.pattern);
     else if(typeof this.schema.minLength !== "undefined") this.input.setAttribute('pattern','.{'+this.schema.minLength+',}');
 
-    if(this.options.compact) this.container.setAttribute('class',this.container.getAttribute('class')+' compact');
+    if(this.options.compact) {
+      this.container.className += ' compact';
+    }
 
     if(this.schema.readOnly || this.schema.readonly) {
       this.always_disabled = true;
