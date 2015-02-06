@@ -124,20 +124,17 @@ JSONEditor.AbstractEditor = Class.extend({
     return this.theme.setButtonText(button, text, icon, title);
   },
   refreshWatchedFieldValues: function() {
-    if(!this.watched_values) return;
     var watched = {};
     var changed = false;
     var self = this;
     
-    if(this.watched) {
-      var val,editor;
-      for(var name in this.watched) {
-        if(!this.watched.hasOwnProperty(name)) continue;
-        editor = self.jsoneditor.getEditor(this.watched[name]);
-        val = editor? editor.getValue() : null;
-        if(self.watched_values[name] !== val) changed = true;
-        watched[name] = val;
-      }
+    var val,editor;
+    for(var name in this.watched) {
+      if(!this.watched.hasOwnProperty(name)) continue;
+      editor = self.jsoneditor.getEditor(this.watched[name]);
+      val = editor? editor.getValue() : null;
+      if(self.watched_values[name] !== val) changed = true;
+      watched[name] = val;
     }
     
     watched.self = this.getValue();

@@ -93,16 +93,13 @@ JSONEditor.prototype = {
 
     $each(JSONEditor.defaults.resolvers,function(i,resolver) {
       var tmp = resolver(schema);
-      if(tmp) {
-        if(JSONEditor.defaults.editors[tmp]) {
-          classname = tmp;
-          return false;
-        }
+      if(tmp && JSONEditor.defaults.editors[tmp]) {
+        classname = tmp;
+        return false;
       }
     });
 
     if(!classname) throw "Unknown editor for schema "+JSON.stringify(schema);
-    if(!JSONEditor.defaults.editors[classname]) throw "Unknown editor "+classname;
 
     return JSONEditor.defaults.editors[classname];
   },

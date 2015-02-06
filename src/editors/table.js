@@ -148,20 +148,9 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
   refreshButtonsExtra: function(need_row_buttons, controls_needed) {
     // Show/hide controls column in table
     $each(this.rows,function(i,editor) {
-      if(need_row_buttons) {
-        editor.controls_cell.style.display = '';
-      }
-      else {
-        editor.controls_cell.style.display = 'none';
-      }
+      editor.controls_cell.style.display = need_row_buttons ? '' : 'none';
     });
-    if(need_row_buttons) {
-      this.controls_header_cell.style.display = '';
-    }
-    else {
-      this.controls_header_cell.style.display = 'none';
-    }
-    
+    this.controls_header_cell.style.display = need_row_buttons ? '' : 'none';
     this.table.style.display = this.value.length === 0 ? 'none' : '';
     this.controls.style.display = controls_needed ? '' : 'none';
   },

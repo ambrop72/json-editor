@@ -85,21 +85,12 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       this.toggle_button.addEventListener('click',function(e) {
         e.preventDefault();
         e.stopPropagation();
-        if(self.collapsed) {
-          self.editor_holder.style.display = '';
-          self.collapsed = false;
-          self.setButtonText(self.toggle_button,'','collapse','Collapse');
-        }
-        else {
-          self.editor_holder.style.display = 'none';
-          self.collapsed = true;
-          self.setButtonText(self.toggle_button,'','expand','Expand');
-        }
+        self.toggleCollapsed();
       });
 
       // If it should start collapsed
       if(this.options.collapsed) {
-        $trigger(this.toggle_button,'click');
+        this.toggleCollapsed();
       }
       
       // Disable controls as needed.
@@ -270,5 +261,17 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       return ordera - orderb;
     });
     return property_order;
+  },
+  toggleCollapsed: function() {
+    var self = this;
+    self.collapsed = !self.collapsed;
+    if(self.collapsed) {
+      self.editor_holder.style.display = 'none';
+      self.setButtonText(self.toggle_button,'','expand','Expand');
+    }
+    else {
+      self.editor_holder.style.display = '';
+      self.setButtonText(self.toggle_button,'','collapse','Collapse');
+    }
   }
 });

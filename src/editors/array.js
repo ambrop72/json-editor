@@ -346,24 +346,12 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       this.toggle_button.addEventListener('click',function(e) {
         e.preventDefault();
         e.stopPropagation();
-        
-        if(self.collapsed) {
-          self.collapsed = false;
-          if(self.panel) self.panel.style.display = '';
-          self.toggleHandlerExtra(true);
-          self.setButtonText(this,'','collapse','Collapse');
-        }
-        else {
-          self.collapsed = true;
-          self.toggleHandlerExtra(false);
-          if(self.panel) self.panel.style.display = 'none';
-          self.setButtonText(this,'','expand','Expand');
-        }
+        self.toggleCollapsed();
       });
 
       // If it should start collapsed
       if(this.options.collapsed) {
-        $trigger(this.toggle_button,'click');
+        this.toggleCollapsed();
       }
       
       // Collapse button disabled
@@ -410,12 +398,21 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   },
   toggleHandlerExtra: function(expanding) {
     var self = this;
-    if (expanding) {
-      self.row_holder.style.display = self.row_holder_display;
-      self.controls.style.display = self.controls_display;
-    } else {
-      self.row_holder.style.display = 'none';
-      self.controls.style.display = 'none';
+    self.row_holder.style.display = expanding ? self.row_holder_display : 'none';
+    self.controls.style.display = expanding ? self.controls_display : 'none';
+  },
+  toggleCollapsed: function() {
+    var self = this;
+    self.collapsed = !self.collapsed;
+    if(self.collapsed) {
+      self.toggleHandlerExtra(false);
+      if(self.panel) self.panel.style.display = 'none';
+      self.setButtonText(self.toggle_button,'','expand','Expand');
+    }
+    else {
+      if(self.panel) self.panel.style.display = '';
+      self.toggleHandlerExtra(true);
+      self.setButtonText(self.toggle_button,'','collapse','Collapse');
     }
   }
 });

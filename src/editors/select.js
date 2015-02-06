@@ -31,9 +31,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       return ""+value;
     }
   },
-  getValue: function() {
-    return this.value;
-  },
   buildImpl: function() {
     var self = this;
     this.input_type = 'select';

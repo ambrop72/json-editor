@@ -94,12 +94,6 @@ var $each = function(obj,callback) {
   }
 };
 
-var $trigger = function(el,event) {
-  var e = document.createEvent('HTMLEvents');
-  e.initEvent(event, true, true);
-  el.dispatchEvent(e);
-};
-
 var $has = function(obj, property) {
   return obj.hasOwnProperty(property);
 };
