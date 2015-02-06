@@ -118,11 +118,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
         self.editor_holder.appendChild(self.editors[key].container);
       });
     }
-    // Layout object editors in grid if needed
-    else {
-      // Do the layout again now that we know the approximate heights of elements
-      this.layoutEditors();
-    }
   },
   addObjectProperty: function(name) {
     var self = this;
