@@ -81,7 +81,7 @@ var $extendPersistent = function(obj) {
 var $each = function(obj,callback) {
   if(!obj) return;
   var i;
-  if(typeof obj.length !== 'undefined') {
+  if(Array.isArray(obj)) {
     for(i=0; i<obj.length; i++) {
       if(callback(i,obj[i])===false) return;
     }
