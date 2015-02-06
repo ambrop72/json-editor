@@ -1,5 +1,8 @@
 // Set the default theme
-JSONEditor.defaults.theme = 'html';
+JSONEditor.defaults.theme = 'bootstrap3';
+
+// Set the default icon library
+JSONEditor.defaults.iconlib = 'bootstrap3';
 
 // Set the default template engine
 JSONEditor.defaults.template = 'javascript';
