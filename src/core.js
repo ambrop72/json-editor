@@ -9,6 +9,9 @@ JSONEditor.prototype = {
     
     this.destroyed = false;
     this.firing_change = false;
+    this.callbacks = {};
+    this.editors = {};
+    this.watchlist = {};
     
     var theme_class = JSONEditor.defaults.themes[this.options.theme || JSONEditor.defaults.theme];
     if(!theme_class) throw "Unknown theme " + (this.options.theme || JSONEditor.defaults.theme);
@@ -23,17 +26,13 @@ JSONEditor.prototype = {
     this.root_container = this.theme.getContainer();
     this.element.appendChild(this.root_container);
     
-    this.translate = this.options.translate || JSONEditor.defaults.translate;
-
     // Create the root editor
     var editor_class = self.getEditorClass(self.schema);
     self.root = self.createEditor(editor_class, {
       jsoneditor: self,
       schema: self.schema,
-      required: true,
       container: self.root_container
     });
-    
     self.root.build();
 
     // Starting data
@@ -51,7 +50,6 @@ JSONEditor.prototype = {
     if(this.destroyed) throw "JSON Editor destroyed";
     
     this.root.setValue(value);
-    return this;
   },
   destroy: function() {
     if(this.destroyed) return;
@@ -69,15 +67,11 @@ JSONEditor.prototype = {
     this.destroyed = true;
   },
   on: function(event, callback) {
-    this.callbacks = this.callbacks || {};
     this.callbacks[event] = this.callbacks[event] || [];
     this.callbacks[event].push(callback);
   },
   off: function(event, callback) {
-    // Specific callback
-    if(event && callback) {
-      this.callbacks = this.callbacks || {};
-      this.callbacks[event] = this.callbacks[event] || [];
+    if (this.callbacks[event]) {
       var newcallbacks = [];
       for(var i=0; i<this.callbacks[event].length; i++) {
         if(this.callbacks[event][i]===callback) continue;
@@ -85,20 +79,12 @@ JSONEditor.prototype = {
       }
       this.callbacks[event] = newcallbacks;
     }
-    // All callbacks for a specific event
-    else if(event) {
-      this.callbacks = this.callbacks || {};
-      this.callbacks[event] = [];
-    }
-    // All callbacks for all events
-    else {
-      this.callbacks = {};
-    }
   },
   trigger: function(event) {
-    if(this.callbacks && this.callbacks[event] && this.callbacks[event].length) {
-      for(var i=0; i<this.callbacks[event].length; i++) {
-        this.callbacks[event][i]();
+    if(this.callbacks[event]) {
+      var cbs = this.callbacks[event].slice();
+      for(var i=0; i<cbs.length; i++) {
+        cbs[i]();
       }
     }
   },
@@ -141,11 +127,10 @@ JSONEditor.prototype = {
     }, 0);
   },
   onChange: function() {
-    var self = this;
-    if (self.destroyed) {
+    if (this.destroyed) {
       return;
     }
-    self._scheduleChange();
+    this._scheduleChange();
   },
   compileTemplate: function(template, name) {
     name = name || JSONEditor.defaults.template;
@@ -170,44 +155,30 @@ JSONEditor.prototype = {
     return engine.compile(template);
   },
   registerEditor: function(editor) {
-    this.editors = this.editors || {};
     this.editors[editor.path] = editor;
-    return this;
   },
   unregisterEditor: function(editor) {
-    this.editors = this.editors || {};
     this.editors[editor.path] = null;
-    return this;
   },
   getEditor: function(path) {
     if(!this.editors) return;
     return this.editors[path];
   },
   doWatch: function(path,callback) {
-    this.watchlist = this.watchlist || {};
     this.watchlist[path] = this.watchlist[path] || [];
     this.watchlist[path].push(callback);
-    
-    return this;
   },
   doUnwatch: function(path,callback) {
-    if(!this.watchlist || !this.watchlist[path]) return this;
-    // If removing all callbacks for a path
-    if(!callback) {
-      this.watchlist[path] = null;
-      return this;
-    }
-    
+    if(!this.watchlist[path]) return;
     var newlist = [];
     for(var i=0; i<this.watchlist[path].length; i++) {
       if(this.watchlist[path][i] === callback) continue;
       else newlist.push(this.watchlist[path][i]);
     }
     this.watchlist[path] = newlist.length? newlist : null;
-    return this;
   },
   notifyWatchers: function(path) {
-    if(!this.watchlist || !this.watchlist[path]) return this;
+    if(!this.watchlist[path]) return;
     for(var i=0; i<this.watchlist[path].length; i++) {
       this.watchlist[path][i]();
     }
@@ -228,6 +199,5 @@ JSONEditor.defaults = {
   templates: {},
   iconlibs: {},
   editors: {},
-  languages: {},
   resolvers: [],
 };

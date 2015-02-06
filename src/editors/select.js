@@ -144,8 +144,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
         this.onChange();
       }
     }
-
-    this._super();
   },
   enable: function() {
     if(!this.always_disabled) {
@@ -157,11 +155,9 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     this.input.disabled = true;
     this._super();
   },
-  destroy: function() {
+  destroyImpl: function() {
     if(this.label && this.label.parentNode) this.label.parentNode.removeChild(this.label);
     if(this.description && this.description.parentNode) this.description.parentNode.removeChild(this.description);
     if(this.input && this.input.parentNode) this.input.parentNode.removeChild(this.input);
-
-    this._super();
   }
 });

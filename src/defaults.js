@@ -7,30 +7,6 @@ JSONEditor.defaults.template = 'javascript';
 // Default options when initializing JSON Editor
 JSONEditor.defaults.options = {};
 
-// String translate function
-JSONEditor.defaults.translate = function(key, variables) {
-  var lang = JSONEditor.defaults.languages[JSONEditor.defaults.language];
-  if(!lang) throw "Unknown language "+JSONEditor.defaults.language;
-  
-  var string = lang[key] || JSONEditor.defaults.languages[JSONEditor.defaults.default_language][key];
-  
-  if(typeof string === "undefined") throw "Unknown translate string "+key;
-  
-  if(variables) {
-    for(var i=0; i<variables.length; i++) {
-      string = string.replace(new RegExp('\\{\\{'+i+'}}','g'),variables[i]);
-    }
-  }
-  
-  return string;
-};
-
-// Translation strings and default languages
-JSONEditor.defaults.default_language = 'en';
-JSONEditor.defaults.language = JSONEditor.defaults.default_language;
-JSONEditor.defaults.languages.en = {
-};
-
 // Default per-editor options
 for(var i in JSONEditor.defaults.editors) {
   if(!JSONEditor.defaults.editors.hasOwnProperty(i)) continue;

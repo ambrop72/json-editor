@@ -12,10 +12,9 @@ JSONEditor.defaults.editors.derived = JSONEditor.AbstractEditor.extend({
             throw "'derived' editor requires the valueTemplate or constantValue property to be set.";
         }
     },
-    destroy: function() {
+    destroyImpl: function() {
         this.myValue = null;
         this.template = null;
-        this._super();
     },
     getValue: function() {
         return this.myValue;
@@ -28,6 +27,5 @@ JSONEditor.defaults.editors.derived = JSONEditor.AbstractEditor.extend({
             this.myValue = this.template(vars);
             this.onChange();
         }
-        this._super();
     }
 });

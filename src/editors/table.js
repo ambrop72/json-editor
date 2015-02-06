@@ -100,12 +100,10 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     
     return ret;
   },
-  destroy: function() {
+  destroyImpl: function() {
     this.innerHTML = '';
     if(this.table && this.table.parentNode) this.table.parentNode.removeChild(this.table);
     this.table = null;
-    
-    this._super();
   },
   setValueImpl: function(value) {
     // Update the array's value, adding/removing rows when necessary

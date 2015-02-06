@@ -144,7 +144,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     if (self.options.table_row) {
       holder = self.theme.getTableCell();
       extra_opts.compact = true;
-      extra_opts.required = true;
     } else {
       holder = self.theme.getChildEditorHolder();
     }
@@ -171,7 +170,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     this.refreshValue();
     this.onChange();
   },
-  destroy: function() {
+  destroyImpl: function() {
     $each(this.editors, function(i,el) {
       el.destroy();
     });
@@ -181,8 +180,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     this.editors = null;
     if(this.editor_holder && this.editor_holder.parentNode) this.editor_holder.parentNode.removeChild(this.editor_holder);
     this.editor_holder = null;
-
-    this._super();
   },
   getFinalValue: function() {
     var result = {};

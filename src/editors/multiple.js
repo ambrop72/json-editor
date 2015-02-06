@@ -44,7 +44,6 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
       container: holder,
       path: self.path,
       parent: self,
-      required: true,
       no_label: true
     });
     self.editor.build();
@@ -141,12 +140,11 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
 
     self.onChange();
   },
-  destroy: function() {
+  destroyImpl: function() {
     if (this.editor) {
       this.editor.destroy();
     }
     if(this.editor_holder && this.editor_holder.parentNode) this.editor_holder.parentNode.removeChild(this.editor_holder);
     if(this.switcher && this.switcher.parentNode) this.switcher.parentNode.removeChild(this.switcher);
-    this._super();
   }
 });

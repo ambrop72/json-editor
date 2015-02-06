@@ -161,6 +161,10 @@ JSONEditor.AbstractEditor = Class.extend({
     else return this.getTitle();
   },
   onWatchedFieldChange: function() {
+  },
+  _onWatchedFieldChange: function() {
+    this.onWatchedFieldChange();
+    
     var vars;
     if(this.header_template) {      
       vars = $extendPersistent(this.getWatchedFieldValues(), {
@@ -199,7 +203,7 @@ JSONEditor.AbstractEditor = Class.extend({
     
     if (self.processing_dirty || self.processing_watch_dirty) {
       if (self.refreshWatchedFieldValues()) {
-        self.onWatchedFieldChange();
+        self._onWatchedFieldChange();
       }
     }
     
@@ -239,8 +243,11 @@ JSONEditor.AbstractEditor = Class.extend({
   getFinalValue: function() {
     return this.getValue();
   },
+  destroyImpl: function() {
+  },
   destroy: function() {
     var self = this;
+    self.destroyImpl();
     $each(this.watched,function(name,adjusted_path) {
       self.jsoneditor.doUnwatch(adjusted_path,self.watch_listener);
     });

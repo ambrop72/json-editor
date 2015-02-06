@@ -107,8 +107,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       schema: schema,
       container: holder,
       path: this.path+'.'+i,
-      parent: this,
-      required: true
+      parent: this
     });
     ret.build();
 
@@ -119,7 +118,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     
     return ret;
   },
-  destroy: function() {
+  destroyImpl: function() {
     this.empty(true);
     if(this.title && this.title.parentNode) this.title.parentNode.removeChild(this.title);
     if(this.description && this.description.parentNode) this.description.parentNode.removeChild(this.description);
@@ -128,8 +127,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     if(this.panel && this.panel.parentNode) this.panel.parentNode.removeChild(this.panel);
     
     this.rows = this.title = this.description = this.row_holder = this.panel = this.controls = null;
-
-    this._super();
   },
   empty: function() {
     if(!this.rows) return;
@@ -169,8 +166,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     self.refreshValue();
 
     self.onChange();
-    
-    // TODO: sortable
   },
   getFinalValue: function() {
     var result = [];

@@ -26,9 +26,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     if(this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
 
     this.format = this.schema.format;
-    if(!this.format && this.schema.media && this.schema.media.type) {
-      this.format = this.schema.media.type.replace(/(^(application|text)\/(x-)?(script\.)?)|(-source$)/g,'');
-    }
     if(!this.format && this.options.default_format) {
       this.format = this.options.default_format;
     }
@@ -124,12 +121,10 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     this.value = this.input.value;
     if(typeof this.value !== "string") this.value = '';
   },
-  destroy: function() {
+  destroyImpl: function() {
     if(this.input && this.input.parentNode) this.input.parentNode.removeChild(this.input);
     if(this.label && this.label.parentNode) this.label.parentNode.removeChild(this.label);
     if(this.description && this.description.parentNode) this.description.parentNode.removeChild(this.description);
-
-    this._super();
   },
   /**
    * This is overridden in derivative editors
