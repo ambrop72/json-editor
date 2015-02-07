@@ -119,3 +119,15 @@ var $isUndefined = function(x) {
 var $isObject = function(x) {
   return (x !== null && typeof x === 'object');
 };
+
+var $orderProperties = function(obj, get_order_func) {
+  var property_order = Object.keys(obj);
+  property_order = property_order.sort(function(a,b) {
+    var ordera = get_order_func(a);
+    var orderb = get_order_func(b);
+    if(typeof ordera !== "number") ordera = 1000;
+    if(typeof orderb !== "number") orderb = 1000;
+    return ordera - orderb;
+  });
+  return property_order;
+};

@@ -42,7 +42,9 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     this.panel.appendChild(this.controls);
 
     if(this.item_has_child_editors) {
-      $each(item_schema.properties, function(prop_name, prop_schema) {
+      var ordered = $orderProperties(item_schema.properties, function(i) { return item_schema.properties[i].propertyOrder; });
+      $each(ordered, function(index, prop_name) {
+        var prop_schema = item_schema.properties[prop_name];
         var title = prop_schema.title ? prop_schema.title : prop_name;
         var th = self.theme.getTableHeaderCell(title);
         if (typeof prop_schema.options !== 'undefined' && prop_schema.options.hidden) {
