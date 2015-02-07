@@ -33,7 +33,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
   },
   buildImpl: function() {
     var self = this;
-    this.input_type = 'select';
     this.enum_options = [];
     this.enum_values = [];
     this.enum_display = [];

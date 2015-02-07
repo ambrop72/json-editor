@@ -37,12 +37,10 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     if(this.format) {
       // Text Area
       if(this.format === 'textarea') {
-        this.input_type = 'textarea';
         this.input = this.theme.getTextareaInput();
       }
       // Range Input
       else if(this.format === 'range') {
-        this.input_type = 'range';
         var min = this.schema.minimum || 0;
         var max = this.schema.maximum || Math.max(100,min+1);
         var step = 1;
@@ -56,14 +54,12 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
       }
       // HTML5 Input type
       else {
-        this.input_type = this.format;
-        this.input = this.theme.getFormInputField(this.input_type);
+        this.input = this.theme.getFormInputField(this.format);
       }
     }
     // Normal text input
     else {
-      this.input_type = 'text';
-      this.input = this.theme.getFormInputField(this.input_type);
+      this.input = this.theme.getFormInputField('text');
     }
     
     this.input.setAttribute('name',this.formname);
