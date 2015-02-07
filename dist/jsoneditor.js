@@ -172,7 +172,7 @@ var $extendPersistent = function(obj) {
 var $each = function(obj,callback) {
   if(!obj) return;
   var i;
-  if(typeof obj.length !== 'undefined') {
+  if(Array.isArray(obj)) {
     for(i=0; i<obj.length; i++) {
       if(callback(i,obj[i])===false) return;
     }
@@ -183,12 +183,6 @@ var $each = function(obj,callback) {
       if(callback(i,obj[i])===false) return;
     }
   }
-};
-
-var $trigger = function(el,event) {
-  var e = document.createEvent('HTMLEvents');
-  e.initEvent(event, true, true);
-  el.dispatchEvent(e);
 };
 
 var $has = function(obj, property) {
@@ -217,6 +211,18 @@ var $isObject = function(x) {
   return (x !== null && typeof x === 'object');
 };
 
+var $orderProperties = function(obj, get_order_func) {
+  var property_order = Object.keys(obj);
+  property_order = property_order.sort(function(a,b) {
+    var ordera = get_order_func(a);
+    var orderb = get_order_func(b);
+    if(typeof ordera !== "number") ordera = 1000;
+    if(typeof orderb !== "number") orderb = 1000;
+    return ordera - orderb;
+  });
+  return property_order;
+};
+
 var JSONEditor = function(element,options) {
   this.element = element;
   this.options = $extendPersistent(JSONEditor.defaults.options, options || {});
@@ -228,6 +234,9 @@ JSONEditor.prototype = {
     
     this.destroyed = false;
     this.firing_change = false;
+    this.callbacks = {};
+    this.editors = {};
+    this.watchlist = {};
     
     var theme_class = JSONEditor.defaults.themes[this.options.theme || JSONEditor.defaults.theme];
     if(!theme_class) throw "Unknown theme " + (this.options.theme || JSONEditor.defaults.theme);
@@ -242,17 +251,13 @@ JSONEditor.prototype = {
     this.root_container = this.theme.getContainer();
     this.element.appendChild(this.root_container);
     
-    this.translate = this.options.translate || JSONEditor.defaults.translate;
-
     // Create the root editor
     var editor_class = self.getEditorClass(self.schema);
     self.root = self.createEditor(editor_class, {
       jsoneditor: self,
       schema: self.schema,
-      required: true,
       container: self.root_container
     });
-    
     self.root.build();
 
     // Starting data
@@ -270,7 +275,6 @@ JSONEditor.prototype = {
     if(this.destroyed) throw "JSON Editor destroyed";
     
     this.root.setValue(value);
-    return this;
   },
   destroy: function() {
     if(this.destroyed) return;
@@ -288,15 +292,11 @@ JSONEditor.prototype = {
     this.destroyed = true;
   },
   on: function(event, callback) {
-    this.callbacks = this.callbacks || {};
     this.callbacks[event] = this.callbacks[event] || [];
     this.callbacks[event].push(callback);
   },
   off: function(event, callback) {
-    // Specific callback
-    if(event && callback) {
-      this.callbacks = this.callbacks || {};
-      this.callbacks[event] = this.callbacks[event] || [];
+    if (this.callbacks[event]) {
       var newcallbacks = [];
       for(var i=0; i<this.callbacks[event].length; i++) {
         if(this.callbacks[event][i]===callback) continue;
@@ -304,20 +304,12 @@ JSONEditor.prototype = {
       }
       this.callbacks[event] = newcallbacks;
     }
-    // All callbacks for a specific event
-    else if(event) {
-      this.callbacks = this.callbacks || {};
-      this.callbacks[event] = [];
-    }
-    // All callbacks for all events
-    else {
-      this.callbacks = {};
-    }
   },
   trigger: function(event) {
-    if(this.callbacks && this.callbacks[event] && this.callbacks[event].length) {
-      for(var i=0; i<this.callbacks[event].length; i++) {
-        this.callbacks[event][i]();
+    if(this.callbacks[event]) {
+      var cbs = this.callbacks[event].slice();
+      for(var i=0; i<cbs.length; i++) {
+        cbs[i]();
       }
     }
   },
@@ -326,16 +318,13 @@ JSONEditor.prototype = {
 
     $each(JSONEditor.defaults.resolvers,function(i,resolver) {
       var tmp = resolver(schema);
-      if(tmp) {
-        if(JSONEditor.defaults.editors[tmp]) {
-          classname = tmp;
-          return false;
-        }
+      if(tmp && JSONEditor.defaults.editors[tmp]) {
+        classname = tmp;
+        return false;
       }
     });
 
     if(!classname) throw "Unknown editor for schema "+JSON.stringify(schema);
-    if(!JSONEditor.defaults.editors[classname]) throw "Unknown editor "+classname;
 
     return JSONEditor.defaults.editors[classname];
   },
@@ -360,11 +349,10 @@ JSONEditor.prototype = {
     }, 0);
   },
   onChange: function() {
-    var self = this;
-    if (self.destroyed) {
+    if (this.destroyed) {
       return;
     }
-    self._scheduleChange();
+    this._scheduleChange();
   },
   compileTemplate: function(template, name) {
     name = name || JSONEditor.defaults.template;
@@ -389,44 +377,30 @@ JSONEditor.prototype = {
     return engine.compile(template);
   },
   registerEditor: function(editor) {
-    this.editors = this.editors || {};
     this.editors[editor.path] = editor;
-    return this;
   },
   unregisterEditor: function(editor) {
-    this.editors = this.editors || {};
     this.editors[editor.path] = null;
-    return this;
   },
   getEditor: function(path) {
     if(!this.editors) return;
     return this.editors[path];
   },
   doWatch: function(path,callback) {
-    this.watchlist = this.watchlist || {};
     this.watchlist[path] = this.watchlist[path] || [];
     this.watchlist[path].push(callback);
-    
-    return this;
   },
   doUnwatch: function(path,callback) {
-    if(!this.watchlist || !this.watchlist[path]) return this;
-    // If removing all callbacks for a path
-    if(!callback) {
-      this.watchlist[path] = null;
-      return this;
-    }
-    
+    if(!this.watchlist[path]) return;
     var newlist = [];
     for(var i=0; i<this.watchlist[path].length; i++) {
       if(this.watchlist[path][i] === callback) continue;
       else newlist.push(this.watchlist[path][i]);
     }
     this.watchlist[path] = newlist.length? newlist : null;
-    return this;
   },
   notifyWatchers: function(path) {
-    if(!this.watchlist || !this.watchlist[path]) return this;
+    if(!this.watchlist[path]) return;
     for(var i=0; i<this.watchlist[path].length; i++) {
       this.watchlist[path][i]();
     }
@@ -447,7 +421,6 @@ JSONEditor.defaults = {
   templates: {},
   iconlibs: {},
   editors: {},
-  languages: {},
   resolvers: [],
 };
 
@@ -577,20 +550,17 @@ JSONEditor.AbstractEditor = Class.extend({
     return this.theme.setButtonText(button, text, icon, title);
   },
   refreshWatchedFieldValues: function() {
-    if(!this.watched_values) return;
     var watched = {};
     var changed = false;
     var self = this;
     
-    if(this.watched) {
-      var val,editor;
-      for(var name in this.watched) {
-        if(!this.watched.hasOwnProperty(name)) continue;
-        editor = self.jsoneditor.getEditor(this.watched[name]);
-        val = editor? editor.getValue() : null;
-        if(self.watched_values[name] !== val) changed = true;
-        watched[name] = val;
-      }
+    var val,editor;
+    for(var name in this.watched) {
+      if(!this.watched.hasOwnProperty(name)) continue;
+      editor = self.jsoneditor.getEditor(this.watched[name]);
+      val = editor? editor.getValue() : null;
+      if(self.watched_values[name] !== val) changed = true;
+      watched[name] = val;
     }
     
     watched.self = this.getValue();
@@ -614,6 +584,10 @@ JSONEditor.AbstractEditor = Class.extend({
     else return this.getTitle();
   },
   onWatchedFieldChange: function() {
+  },
+  _onWatchedFieldChange: function() {
+    this.onWatchedFieldChange();
+    
     var vars;
     if(this.header_template) {      
       vars = $extendPersistent(this.getWatchedFieldValues(), {
@@ -652,7 +626,7 @@ JSONEditor.AbstractEditor = Class.extend({
     
     if (self.processing_dirty || self.processing_watch_dirty) {
       if (self.refreshWatchedFieldValues()) {
-        self.onWatchedFieldChange();
+        self._onWatchedFieldChange();
       }
     }
     
@@ -692,8 +666,11 @@ JSONEditor.AbstractEditor = Class.extend({
   getFinalValue: function() {
     return this.getValue();
   },
+  destroyImpl: function() {
+  },
   destroy: function() {
     var self = this;
+    self.destroyImpl();
     $each(this.watched,function(name,adjusted_path) {
       self.jsoneditor.doUnwatch(adjusted_path,self.watch_listener);
     });
@@ -774,9 +751,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     if(this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
 
     this.format = this.schema.format;
-    if(!this.format && this.schema.media && this.schema.media.type) {
-      this.format = this.schema.media.type.replace(/(^(application|text)\/(x-)?(script\.)?)|(-source$)/g,'');
-    }
     if(!this.format && this.options.default_format) {
       this.format = this.options.default_format;
     }
@@ -824,7 +798,9 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     if(typeof this.schema.pattern !== "undefined") this.input.setAttribute('pattern',this.schema.pattern);
     else if(typeof this.schema.minLength !== "undefined") this.input.setAttribute('pattern','.{'+this.schema.minLength+',}');
 
-    if(this.options.compact) this.container.setAttribute('class',this.container.getAttribute('class')+' compact');
+    if(this.options.compact) {
+      this.container.className += ' compact';
+    }
 
     if(this.schema.readOnly || this.schema.readonly) {
       this.always_disabled = true;
@@ -870,12 +846,10 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     this.value = this.input.value;
     if(typeof this.value !== "string") this.value = '';
   },
-  destroy: function() {
+  destroyImpl: function() {
     if(this.input && this.input.parentNode) this.input.parentNode.removeChild(this.input);
     if(this.label && this.label.parentNode) this.label.parentNode.removeChild(this.label);
     if(this.description && this.description.parentNode) this.description.parentNode.removeChild(this.description);
-
-    this._super();
   },
   /**
    * This is overridden in derivative editors
@@ -988,21 +962,12 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       this.toggle_button.addEventListener('click',function(e) {
         e.preventDefault();
         e.stopPropagation();
-        if(self.collapsed) {
-          self.editor_holder.style.display = '';
-          self.collapsed = false;
-          self.setButtonText(self.toggle_button,'','collapse','Collapse');
-        }
-        else {
-          self.editor_holder.style.display = 'none';
-          self.collapsed = true;
-          self.setButtonText(self.toggle_button,'','expand','Expand');
-        }
+        self.toggleCollapsed();
       });
 
       // If it should start collapsed
       if(this.options.collapsed) {
-        $trigger(this.toggle_button,'click');
+        this.toggleCollapsed();
       }
       
       // Disable controls as needed.
@@ -1030,11 +995,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
         self.editor_holder.appendChild(self.editors[key].container);
       });
     }
-    // Layout object editors in grid if needed
-    else {
-      // Do the layout again now that we know the approximate heights of elements
-      this.layoutEditors();
-    }
   },
   addObjectProperty: function(name) {
     var self = this;
@@ -1047,7 +1007,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     if (self.options.table_row) {
       holder = self.theme.getTableCell();
       extra_opts.compact = true;
-      extra_opts.required = true;
     } else {
       holder = self.theme.getChildEditorHolder();
     }
@@ -1074,7 +1033,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     this.refreshValue();
     this.onChange();
   },
-  destroy: function() {
+  destroyImpl: function() {
     $each(this.editors, function(i,el) {
       el.destroy();
     });
@@ -1084,8 +1043,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     this.editors = null;
     if(this.editor_holder && this.editor_holder.parentNode) this.editor_holder.parentNode.removeChild(this.editor_holder);
     this.editor_holder = null;
-
-    this._super();
   },
   getFinalValue: function() {
     var result = {};
@@ -1167,15 +1124,19 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   },
   computeOrder: function() {
     var self = this;
-    var property_order = Object.keys(self.editors);
-    property_order = property_order.sort(function(a,b) {
-      var ordera = self.editors[a].schema.propertyOrder;
-      var orderb = self.editors[b].schema.propertyOrder;
-      if(typeof ordera !== "number") ordera = 1000;
-      if(typeof orderb !== "number") orderb = 1000;
-      return ordera - orderb;
-    });
-    return property_order;
+    return $orderProperties(self.editors, function(i) { return self.editors[i].schema.propertyOrder; });
+  },
+  toggleCollapsed: function() {
+    var self = this;
+    self.collapsed = !self.collapsed;
+    if(self.collapsed) {
+      self.editor_holder.style.display = 'none';
+      self.setButtonText(self.toggle_button,'','expand','Expand');
+    }
+    else {
+      self.editor_holder.style.display = '';
+      self.setButtonText(self.toggle_button,'','collapse','Collapse');
+    }
   }
 });
 
@@ -1288,8 +1249,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       schema: schema,
       container: holder,
       path: this.path+'.'+i,
-      parent: this,
-      required: true
+      parent: this
     });
     ret.build();
 
@@ -1300,7 +1260,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     
     return ret;
   },
-  destroy: function() {
+  destroyImpl: function() {
     this.empty(true);
     if(this.title && this.title.parentNode) this.title.parentNode.removeChild(this.title);
     if(this.description && this.description.parentNode) this.description.parentNode.removeChild(this.description);
@@ -1309,8 +1269,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     if(this.panel && this.panel.parentNode) this.panel.parentNode.removeChild(this.panel);
     
     this.rows = this.title = this.description = this.row_holder = this.panel = this.controls = null;
-
-    this._super();
   },
   empty: function() {
     if(!this.rows) return;
@@ -1350,8 +1308,6 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     self.refreshValue();
 
     self.onChange();
-    
-    // TODO: sortable
   },
   getFinalValue: function() {
     var result = [];
@@ -1532,24 +1488,12 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       this.toggle_button.addEventListener('click',function(e) {
         e.preventDefault();
         e.stopPropagation();
-        
-        if(self.collapsed) {
-          self.collapsed = false;
-          if(self.panel) self.panel.style.display = '';
-          self.toggleHandlerExtra(true);
-          self.setButtonText(this,'','collapse','Collapse');
-        }
-        else {
-          self.collapsed = true;
-          self.toggleHandlerExtra(false);
-          if(self.panel) self.panel.style.display = 'none';
-          self.setButtonText(this,'','expand','Expand');
-        }
+        self.toggleCollapsed();
       });
 
       // If it should start collapsed
       if(this.options.collapsed) {
-        $trigger(this.toggle_button,'click');
+        this.toggleCollapsed();
       }
       
       // Collapse button disabled
@@ -1596,12 +1540,21 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   },
   toggleHandlerExtra: function(expanding) {
     var self = this;
-    if (expanding) {
-      self.row_holder.style.display = self.row_holder_display;
-      self.controls.style.display = self.controls_display;
-    } else {
-      self.row_holder.style.display = 'none';
-      self.controls.style.display = 'none';
+    self.row_holder.style.display = expanding ? self.row_holder_display : 'none';
+    self.controls.style.display = expanding ? self.controls_display : 'none';
+  },
+  toggleCollapsed: function() {
+    var self = this;
+    self.collapsed = !self.collapsed;
+    if(self.collapsed) {
+      self.toggleHandlerExtra(false);
+      if(self.panel) self.panel.style.display = 'none';
+      self.setButtonText(self.toggle_button,'','expand','Expand');
+    }
+    else {
+      if(self.panel) self.panel.style.display = '';
+      self.toggleHandlerExtra(true);
+      self.setButtonText(self.toggle_button,'','collapse','Collapse');
     }
   }
 });
@@ -1650,7 +1603,9 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     this.panel.appendChild(this.controls);
 
     if(this.item_has_child_editors) {
-      $each(item_schema.properties, function(prop_name, prop_schema) {
+      var ordered = $orderProperties(item_schema.properties, function(i) { return item_schema.properties[i].propertyOrder; });
+      $each(ordered, function(index, prop_name) {
+        var prop_schema = item_schema.properties[prop_name];
         var title = prop_schema.title ? prop_schema.title : prop_name;
         var th = self.theme.getTableHeaderCell(title);
         if (typeof prop_schema.options !== 'undefined' && prop_schema.options.hidden) {
@@ -1708,12 +1663,10 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     
     return ret;
   },
-  destroy: function() {
+  destroyImpl: function() {
     this.innerHTML = '';
     if(this.table && this.table.parentNode) this.table.parentNode.removeChild(this.table);
     this.table = null;
-    
-    this._super();
   },
   setValueImpl: function(value) {
     // Update the array's value, adding/removing rows when necessary
@@ -1758,20 +1711,9 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
   refreshButtonsExtra: function(need_row_buttons, controls_needed) {
     // Show/hide controls column in table
     $each(this.rows,function(i,editor) {
-      if(need_row_buttons) {
-        editor.controls_cell.style.display = '';
-      }
-      else {
-        editor.controls_cell.style.display = 'none';
-      }
+      editor.controls_cell.style.display = need_row_buttons ? '' : 'none';
     });
-    if(need_row_buttons) {
-      this.controls_header_cell.style.display = '';
-    }
-    else {
-      this.controls_header_cell.style.display = 'none';
-    }
-    
+    this.controls_header_cell.style.display = need_row_buttons ? '' : 'none';
     this.table.style.display = this.value.length === 0 ? 'none' : '';
     this.controls.style.display = controls_needed ? '' : 'none';
   },
@@ -1846,7 +1788,6 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
       container: holder,
       path: self.path,
       parent: self,
-      required: true,
       no_label: true
     });
     self.editor.build();
@@ -1943,13 +1884,12 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
 
     self.onChange();
   },
-  destroy: function() {
+  destroyImpl: function() {
     if (this.editor) {
       this.editor.destroy();
     }
     if(this.editor_holder && this.editor_holder.parentNode) this.editor_holder.parentNode.removeChild(this.editor_holder);
     if(this.switcher && this.switcher.parentNode) this.switcher.parentNode.removeChild(this.switcher);
-    this._super();
   }
 });
 
@@ -1985,9 +1925,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     else {
       return ""+value;
     }
-  },
-  getValue: function() {
-    return this.value;
   },
   buildImpl: function() {
     var self = this;
@@ -2026,7 +1963,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     if(!this.options.compact) this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
     if(this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
 
-    if(this.options.compact) this.container.setAttribute('class',this.container.getAttribute('class')+' compact');
+    if(this.options.compact) this.container.className += ' compact';
 
     this.input = this.theme.getSelectInput(this.enum_options);
     this.theme.setSelectOptions(this.input,this.enum_options,this.enum_display);
@@ -2099,8 +2036,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
         this.onChange();
       }
     }
-
-    this._super();
   },
   enable: function() {
     if(!this.always_disabled) {
@@ -2112,12 +2047,10 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     this.input.disabled = true;
     this._super();
   },
-  destroy: function() {
+  destroyImpl: function() {
     if(this.label && this.label.parentNode) this.label.parentNode.removeChild(this.label);
     if(this.description && this.description.parentNode) this.description.parentNode.removeChild(this.description);
     if(this.input && this.input.parentNode) this.input.parentNode.removeChild(this.input);
-
-    this._super();
   }
 });
 
@@ -2127,31 +2060,24 @@ JSONEditor.defaults.editors.derived = JSONEditor.AbstractEditor.extend({
         if ($has(this.schema, 'valueTemplate')) {
             this.derived_mode = 'template';
             this.template = this.jsoneditor.compileTemplate(this.schema.valueTemplate, this.template_engine);
-            this.myValue = null;
         } else if ($has(this.schema, 'constantValue')) {
             this.derived_mode = 'constant';
-            this.myValue = this.schema.constantValue;
+            this.value = this.schema.constantValue;
         } else {
             throw "'derived' editor requires the valueTemplate or constantValue property to be set.";
         }
     },
-    destroy: function() {
-        this.myValue = null;
+    destroyImpl: function() {
         this.template = null;
-        this._super();
-    },
-    getValue: function() {
-        return this.myValue;
     },
     setValueImpl: function(val) {
     },
     onWatchedFieldChange: function() {
         if (this.derived_mode == 'template') {
             var vars = this.getWatchedFieldValues();
-            this.myValue = this.template(vars);
+            this.value = this.template(vars);
             this.onChange();
         }
-        this._super();
     }
 });
 
@@ -2493,187 +2419,6 @@ JSONEditor.AbstractTheme = Class.extend({
   }
 });
 
-JSONEditor.defaults.themes.bootstrap2 = JSONEditor.AbstractTheme.extend({
-  getRangeInput: function(min, max, step) {
-    // TODO: use bootstrap slider
-    return this._super(min, max, step);
-  },
-  getGridContainer: function() {
-    var el = document.createElement('div');
-    el.className = 'container-fluid';
-    return el;
-  },
-  getGridRow: function() {
-    var el = document.createElement('div');
-    el.className = 'row-fluid';
-    return el;
-  },
-  getFormInputLabel: function(text) {
-    var el = this._super(text);
-    el.style.display = 'inline-block';
-    el.style.fontWeight = 'bold';
-    return el;
-  },
-  setGridColumnSize: function(el,size) {
-    el.className = 'span'+size;
-  },
-  getSelectInput: function(options) {
-    var input = this._super(options);
-    input.style.width = 'auto';
-    input.style.maxWidth = '98%';
-    return input;
-  },
-  getFormInputField: function(type) {
-    var el = this._super(type);
-    el.style.width = '98%';
-    return el;
-  },
-  afterInputReady: function(input) {
-    if(input.controlgroup) return;
-    input.controlgroup = this.closest(input,'.control-group');
-    input.controls = this.closest(input,'.controls');
-    if(this.closest(input,'.compact')) {
-      input.controlgroup.className = input.controlgroup.className.replace(/control-group/g,'').replace(/[ ]{2,}/g,' ');
-      input.controls.className = input.controlgroup.className.replace(/controls/g,'').replace(/[ ]{2,}/g,' ');
-      input.style.marginBottom = 0;
-    }
-
-    // TODO: use bootstrap slider
-  },
-  getIndentedPanel: function() {
-    var el = document.createElement('div');
-    el.className = 'well well-small';
-    return el;
-  },
-  getFormInputDescription: function(text) {
-    var el = document.createElement('p');
-    el.className = 'help-inline';
-    el.textContent = text;
-    return el;
-  },
-  getFormControl: function(label, input, description) {
-    var ret = document.createElement('div');
-    ret.className = 'control-group';
-
-    var controls = document.createElement('div');
-    controls.className = 'controls';
-
-    if(label && input.getAttribute('type') === 'checkbox') {
-      ret.appendChild(controls);
-      label.className += ' checkbox';
-      label.appendChild(input);
-      controls.appendChild(label);
-      controls.style.height = '30px';
-    }
-    else {
-      if(label) {
-        label.className += ' control-label';
-        ret.appendChild(label);
-      }
-      controls.appendChild(input);
-      ret.appendChild(controls);
-    }
-
-    if(description) controls.appendChild(description);
-
-    return ret;
-  },
-  getHeaderButtonHolder: function() {
-    var el = this.getButtonHolder();
-    el.style.marginLeft = '10px';
-    return el;
-  },
-  getButtonHolder: function() {
-    var el = document.createElement('div');
-    el.className = 'btn-group';
-    return el;
-  },
-  getButton: function(text, icon, title) {
-    var el =  this._super(text, icon, title);
-    el.className += ' btn btn-default';
-    return el;
-  },
-  getTable: function() {
-    var el = document.createElement('table');
-    el.className = 'table table-bordered';
-    el.style.width = 'auto';
-    el.style.maxWidth = 'none';
-    return el;
-  },
-  addInputError: function(input,text) {
-    if(!input.controlgroup || !input.controls) return;
-    input.controlgroup.className += ' error';
-    if(!input.errmsg) {
-      input.errmsg = document.createElement('p');
-      input.errmsg.className = 'help-block errormsg';
-      input.controls.appendChild(input.errmsg);
-    }
-    else {
-      input.errmsg.style.display = '';
-    }
-
-    input.errmsg.textContent = text;
-  },
-  removeInputError: function(input) {
-    if(!input.errmsg) return;
-    input.errmsg.style.display = 'none';
-    input.controlgroup.className = input.controlgroup.className.replace(/\s?error/g,'');
-  },
-  getTabHolder: function() {
-    var el = document.createElement('div');
-    el.className = 'tabbable tabs-left';
-    el.innerHTML = "<ul class='nav nav-tabs span2' style='margin-right: 0;'></ul><div class='tab-content span10' style='overflow:visible;'></div>";
-    return el;
-  },
-  getTab: function(text) {
-    var el = document.createElement('li');
-    var a = document.createElement('a');
-    a.setAttribute('href','#');
-    a.appendChild(text);
-    el.appendChild(a);
-    return el;
-  },
-  getTabContentHolder: function(tab_holder) {
-    return tab_holder.children[1];
-  },
-  getTabContent: function() {
-    var el = document.createElement('div');
-    el.className = 'tab-pane active';
-    return el;
-  },
-  markTabActive: function(tab) {
-    tab.className += ' active';
-  },
-  markTabInactive: function(tab) {
-    tab.className = tab.className.replace(/\s?active/g,'');
-  },
-  addTab: function(holder, tab) {
-    holder.children[0].appendChild(tab);
-  },
-  getProgressBar: function() {
-    var container = document.createElement('div');
-    container.className = 'progress';
-
-    var bar = document.createElement('div');
-    bar.className = 'bar';
-    bar.style.width = '0%';
-    container.appendChild(bar);
-
-    return container;
-  },
-  updateProgressBar: function(progressBar, progress) {
-    if (!progressBar) return;
-
-    progressBar.firstChild.style.width = progress + "%";
-  },
-  updateProgressBarUnknown: function(progressBar) {
-    if (!progressBar) return;
-
-    progressBar.className = 'progress progress-striped active';
-    progressBar.firstChild.style.width = '100%';
-  }
-});
-
 JSONEditor.defaults.themes.bootstrap3 = JSONEditor.AbstractTheme.extend({
   getSelectInput: function(options) {
     var el = this._super(options);
@@ -2843,470 +2588,6 @@ JSONEditor.defaults.themes.bootstrap3 = JSONEditor.AbstractTheme.extend({
   }
 });
 
-// Base Foundation theme
-JSONEditor.defaults.themes.foundation = JSONEditor.AbstractTheme.extend({
-  getChildEditorHolder: function() {
-    var el = document.createElement('div');
-    el.style.marginBottom = '15px';
-    return el;
-  },
-  getSelectInput: function(options) {
-    var el = this._super(options);
-    el.style.minWidth = 'none';
-    el.style.padding = '5px';
-    el.style.marginTop = '3px';
-    return el;
-  },
-  getSwitcher: function(options) {
-    var el = this._super(options);
-    el.style.paddingRight = '8px';
-    return el;
-  },
-  afterInputReady: function(input) {
-    if(this.closest(input,'.compact')) {
-      input.style.marginBottom = 0;
-    }
-    input.group = this.closest(input,'.form-control');
-  },
-  getFormInputLabel: function(text) {
-    var el = this._super(text);
-    el.style.display = 'inline-block';
-    return el;
-  },
-  getFormInputField: function(type) {
-    var el = this._super(type);
-    el.style.width = '100%';
-    el.style.marginBottom = type==='checkbox'? '0' : '12px';
-    return el;
-  },
-  getFormInputDescription: function(text) {
-    var el = document.createElement('p');
-    el.textContent = text;
-    el.style.marginTop = '-10px';
-    el.style.fontStyle = 'italic';
-    return el;
-  },
-  getIndentedPanel: function() {
-    var el = document.createElement('div');
-    el.className = 'panel';
-    return el;
-  },
-  getHeaderButtonHolder: function() {
-    var el = this.getButtonHolder();
-    el.style.display = 'inline-block';
-    el.style.marginLeft = '10px';
-    el.style.verticalAlign = 'middle';
-    return el;
-  },
-  getButtonHolder: function() {
-    var el = document.createElement('div');
-    el.className = 'button-group';
-    return el;
-  },
-  getButton: function(text, icon, title) {
-    var el = this._super(text, icon, title);
-    el.className += ' small button';
-    return el;
-  },
-  addInputError: function(input,text) {
-    if(!input.group) return;
-    input.group.className += ' error';
-    
-    if(!input.errmsg) {
-      input.insertAdjacentHTML('afterend','<small class="error"></small>');
-      input.errmsg = input.parentNode.getElementsByClassName('error')[0];
-    }
-    else {
-      input.errmsg.style.display = '';
-    }
-    
-    input.errmsg.textContent = text;
-  },
-  removeInputError: function(input) {
-    if(!input.errmsg) return;
-    input.group.className = input.group.className.replace(/ error/g,'');
-    input.errmsg.style.display = 'none';
-  },
-  getProgressBar: function() {
-    var progressBar = document.createElement('div');
-    progressBar.className = 'progress';
-
-    var meter = document.createElement('span');
-    meter.className = 'meter';
-    meter.style.width = '0%';
-    progressBar.appendChild(meter);
-    return progressBar;
-  },
-  updateProgressBar: function(progressBar, progress) {
-    if (!progressBar) return;
-    progressBar.firstChild.style.width = progress + '%';
-  },
-  updateProgressBarUnknown: function(progressBar) {
-    if (!progressBar) return;
-    progressBar.firstChild.style.width = '100%';
-  }
-});
-
-// Foundation 3 Specific Theme
-JSONEditor.defaults.themes.foundation3 = JSONEditor.defaults.themes.foundation.extend({
-  getHeaderButtonHolder: function() {
-    var el = this._super();
-    el.style.fontSize = '.6em';
-    return el;
-  },
-  getFormInputLabel: function(text) {
-    var el = this._super(text);
-    el.style.fontWeight = 'bold';
-    return el;
-  },
-  getTabHolder: function() {
-    var el = document.createElement('div');
-    el.className = 'row';
-    el.innerHTML = "<dl class='tabs vertical two columns'></dl><div class='tabs-content ten columns'></div>";
-    return el;
-  },
-  setGridColumnSize: function(el,size) {
-    var sizes = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve'];
-    el.className = 'columns '+sizes[size];
-  },
-  getTab: function(text) {
-    var el = document.createElement('dd');
-    var a = document.createElement('a');
-    a.setAttribute('href','#');
-    a.appendChild(text);
-    el.appendChild(a);
-    return el;
-  },
-  getTabContentHolder: function(tab_holder) {
-    return tab_holder.children[1];
-  },
-  getTabContent: function() {
-    var el = document.createElement('div');
-    el.className = 'content active';
-    el.style.paddingLeft = '5px';
-    return el;
-  },
-  markTabActive: function(tab) {
-    tab.className += ' active';
-  },
-  markTabInactive: function(tab) {
-    tab.className = tab.className.replace(/\s*active/g,'');
-  },
-  addTab: function(holder, tab) {
-    holder.children[0].appendChild(tab);
-  }
-});
-
-// Foundation 4 Specific Theme
-JSONEditor.defaults.themes.foundation4 = JSONEditor.defaults.themes.foundation.extend({
-  getHeaderButtonHolder: function() {
-    var el = this._super();
-    el.style.fontSize = '.6em';
-    return el;
-  },
-  setGridColumnSize: function(el,size) {
-    el.className = 'columns large-'+size;
-  },
-  getFormInputDescription: function(text) {
-    var el = this._super(text);
-    el.style.fontSize = '.8rem';
-    return el;
-  },
-  getFormInputLabel: function(text) {
-    var el = this._super(text);
-    el.style.fontWeight = 'bold';
-    return el;
-  }
-});
-
-// Foundation 5 Specific Theme
-JSONEditor.defaults.themes.foundation5 = JSONEditor.defaults.themes.foundation.extend({
-  getFormInputDescription: function(text) {
-    var el = this._super(text);
-    el.style.fontSize = '.8rem';
-    return el;
-  },
-  setGridColumnSize: function(el,size) {
-    el.className = 'columns medium-'+size;
-  },
-  getButton: function(text, icon, title) {
-    var el = this._super(text,icon,title);
-    el.className = el.className.replace(/\s*small/g,'') + ' tiny';
-    return el;
-  },
-  getTabHolder: function() {
-    var el = document.createElement('div');
-    el.innerHTML = "<dl class='tabs vertical'></dl><div class='tabs-content'></div>";
-    return el;
-  },
-  getTab: function(text) {
-    var el = document.createElement('dd');
-    var a = document.createElement('a');
-    a.setAttribute('href','#');
-    a.appendChild(text);
-    el.appendChild(a);
-    return el;
-  },
-  getTabContentHolder: function(tab_holder) {
-    return tab_holder.children[1];
-  },
-  getTabContent: function() {
-    var el = document.createElement('div');
-    el.className = 'content active';
-    el.style.paddingLeft = '5px';
-    return el;
-  },
-  markTabActive: function(tab) {
-    tab.className += ' active';
-  },
-  markTabInactive: function(tab) {
-    tab.className = tab.className.replace(/\s*active/g,'');
-  },
-  addTab: function(holder, tab) {
-    holder.children[0].appendChild(tab);
-  }
-});
-
-JSONEditor.defaults.themes.html = JSONEditor.AbstractTheme.extend({
-  getFormInputLabel: function(text) {
-    var el = this._super(text);
-    el.style.display = 'block';
-    el.style.marginBottom = '3px';
-    el.style.fontWeight = 'bold';
-    return el;
-  },
-  getFormInputDescription: function(text) {
-    var el = this._super(text);
-    el.style.fontSize = '.8em';
-    el.style.margin = 0;
-    el.style.display = 'inline-block';
-    el.style.fontStyle = 'italic';
-    return el;
-  },
-  getIndentedPanel: function() {
-    var el = this._super();
-    el.style.border = '1px solid #ddd';
-    el.style.padding = '5px';
-    el.style.margin = '5px';
-    el.style.borderRadius = '3px';
-    return el;
-  },
-  getChildEditorHolder: function() {
-    var el = this._super();
-    el.style.marginBottom = '8px';
-    return el;
-  },
-  getHeaderButtonHolder: function() {
-    var el = this.getButtonHolder();
-    el.style.display = 'inline-block';
-    el.style.marginLeft = '10px';
-    el.style.fontSize = '.8em';
-    el.style.verticalAlign = 'middle';
-    return el;
-  },
-  getTable: function() {
-    var el = this._super();
-    el.style.borderBottom = '1px solid #ccc';
-    el.style.marginBottom = '5px';
-    return el;
-  },
-  addInputError: function(input, text) {
-    input.style.borderColor = 'red';
-    
-    if(!input.errmsg) {
-      var group = this.closest(input,'.form-control');
-      input.errmsg = document.createElement('div');
-      input.errmsg.setAttribute('class','errmsg');
-      input.errmsg.style = input.errmsg.style || {};
-      input.errmsg.style.color = 'red';
-      group.appendChild(input.errmsg);
-    }
-    else {
-      input.errmsg.style.display = 'block';
-    }
-    
-    input.errmsg.innerHTML = '';
-    input.errmsg.appendChild(document.createTextNode(text));
-  },
-  removeInputError: function(input) {
-    input.style.borderColor = '';
-    if(input.errmsg) input.errmsg.style.display = 'none';
-  },
-  getProgressBar: function() {
-    var max = 100, start = 0;
-
-    var progressBar = document.createElement('progress');
-    progressBar.setAttribute('max', max);
-    progressBar.setAttribute('value', start);
-    return progressBar;
-  },
-  updateProgressBar: function(progressBar, progress) {
-    if (!progressBar) return;
-    progressBar.setAttribute('value', progress);
-  },
-  updateProgressBarUnknown: function(progressBar) {
-    if (!progressBar) return;
-    progressBar.removeAttribute('value');
-  }
-});
-
-JSONEditor.defaults.themes.jqueryui = JSONEditor.AbstractTheme.extend({
-  getTable: function() {
-    var el = this._super();
-    el.setAttribute('cellpadding',5);
-    el.setAttribute('cellspacing',0);
-    return el;
-  },
-  getTableHeaderCell: function(text) {
-    var el = this._super(text);
-    el.className = 'ui-state-active';
-    el.style.fontWeight = 'bold';
-    return el;
-  },
-  getTableCell: function() {
-    var el = this._super();
-    el.className = 'ui-widget-content';
-    return el;
-  },
-  getHeaderButtonHolder: function() {
-    var el = this.getButtonHolder();
-    el.style.marginLeft = '10px';
-    el.style.fontSize = '.6em';
-    el.style.display = 'inline-block';
-    return el;
-  },
-  getFormInputDescription: function(text) {
-    var el = this.getDescription(text);
-    el.style.marginLeft = '10px';
-    el.style.display = 'inline-block';
-    return el;
-  },
-  getFormControl: function(label, input, description) {
-    var el = this._super(label,input,description);
-    if(input.type === 'checkbox') {
-      el.style.lineHeight = '25px';
-      
-      el.style.padding = '3px 0';
-    }
-    else {
-      el.style.padding = '4px 0 8px 0';
-    }
-    return el;
-  },
-  getDescription: function(text) {
-    var el = document.createElement('span');
-    el.style.fontSize = '.8em';
-    el.style.fontStyle = 'italic';
-    el.textContent = text;
-    return el;
-  },
-  getButtonHolder: function() {
-    var el = document.createElement('div');
-    el.className = 'ui-buttonset';
-    el.style.fontSize = '.7em';
-    return el;
-  },
-  getFormInputLabel: function(text) {
-    var el = document.createElement('label');
-    el.style.fontWeight = 'bold';
-    el.style.display = 'block';
-    el.textContent = text;
-    return el;
-  },
-  getButton: function(text, icon, title) {
-    var button = document.createElement("button");
-    button.className = 'ui-button ui-widget ui-state-default ui-corner-all';
-
-    // Icon only
-    if(icon && !text) {
-      button.className += ' ui-button-icon-only';
-      icon.className += ' ui-button-icon-primary ui-icon-primary';
-      button.appendChild(icon);
-    }
-    // Icon and Text
-    else if(icon) {
-      button.className += ' ui-button-text-icon-primary';
-      icon.className += ' ui-button-icon-primary ui-icon-primary';
-      button.appendChild(icon);
-    }
-    // Text only
-    else {
-      button.className += ' ui-button-text-only';
-    }
-
-    var el = document.createElement('span');
-    el.className = 'ui-button-text';
-    el.textContent = text||title||".";
-    button.appendChild(el);
-
-    button.setAttribute('title',title);
-    
-    return button;
-  },
-  setButtonText: function(button,text, icon, title) {
-    button.innerHTML = '';
-    button.className = 'ui-button ui-widget ui-state-default ui-corner-all';
-
-    // Icon only
-    if(icon && !text) {
-      button.className += ' ui-button-icon-only';
-      icon.className += ' ui-button-icon-primary ui-icon-primary';
-      button.appendChild(icon);
-    }
-    // Icon and Text
-    else if(icon) {
-      button.className += ' ui-button-text-icon-primary';
-      icon.className += ' ui-button-icon-primary ui-icon-primary';
-      button.appendChild(icon);
-    }
-    // Text only
-    else {
-      button.className += ' ui-button-text-only';
-    }
-
-    var el = document.createElement('span');
-    el.className = 'ui-button-text';
-    el.textContent = text||title||".";
-    button.appendChild(el);
-
-    button.setAttribute('title',title);
-  },
-  getIndentedPanel: function() {
-    var el = document.createElement('div');
-    el.className = 'ui-widget-content ui-corner-all';
-    el.style.padding = '1em 1.4em';
-    el.style.marginBottom = '20px';
-    return el;
-  },
-  afterInputReady: function(input) {
-    if(input.controls) return;
-    input.controls = this.closest(input,'.form-control');
-  },
-  addInputError: function(input,text) {
-    if(!input.controls) return;
-    if(!input.errmsg) {
-      input.errmsg = document.createElement('div');
-      input.errmsg.className = 'ui-state-error';
-      input.controls.appendChild(input.errmsg);
-    }
-    else {
-      input.errmsg.style.display = '';
-    }
-
-    input.errmsg.textContent = text;
-  },
-  removeInputError: function(input) {
-    if(!input.errmsg) return;
-    input.errmsg.style.display = 'none';
-  },
-  markTabActive: function(tab) {
-    tab.className = tab.className.replace(/\s*ui-widget-header/g,'')+' ui-state-active';
-  },
-  markTabInactive: function(tab) {
-    tab.className = tab.className.replace(/\s*ui-state-active/g,'')+' ui-widget-header';
-  }
-});
-
 JSONEditor.AbstractIconLib = Class.extend({
   mapping: {
     collapse: '',
@@ -3335,21 +2616,6 @@ JSONEditor.AbstractIconLib = Class.extend({
   }
 });
 
-JSONEditor.defaults.iconlibs.bootstrap2 = JSONEditor.AbstractIconLib.extend({
-  mapping: {
-    collapse: 'chevron-down',
-    expand: 'chevron-up',
-    delete: 'trash',
-    edit: 'pencil',
-    add: 'plus',
-    cancel: 'ban-circle',
-    save: 'ok',
-    moveup: 'arrow-up',
-    movedown: 'arrow-down'
-  },
-  icon_prefix: 'icon-'
-});
-
 JSONEditor.defaults.iconlibs.bootstrap3 = JSONEditor.AbstractIconLib.extend({
   mapping: {
     collapse: 'chevron-down',
@@ -3365,81 +2631,6 @@ JSONEditor.defaults.iconlibs.bootstrap3 = JSONEditor.AbstractIconLib.extend({
   icon_prefix: 'glyphicon glyphicon-'
 });
 
-JSONEditor.defaults.iconlibs.fontawesome3 = JSONEditor.AbstractIconLib.extend({
-  mapping: {
-    collapse: 'chevron-down',
-    expand: 'chevron-right',
-    delete: 'remove',
-    edit: 'pencil',
-    add: 'plus',
-    cancel: 'ban-circle',
-    save: 'save',
-    moveup: 'arrow-up',
-    movedown: 'arrow-down'
-  },
-  icon_prefix: 'icon-'
-});
-
-JSONEditor.defaults.iconlibs.fontawesome4 = JSONEditor.AbstractIconLib.extend({
-  mapping: {
-    collapse: 'caret-square-o-down',
-    expand: 'caret-square-o-right',
-    delete: 'times',
-    edit: 'pencil',
-    add: 'plus',
-    cancel: 'ban',
-    save: 'save',
-    moveup: 'arrow-up',
-    movedown: 'arrow-down'
-  },
-  icon_prefix: 'fa fa-'
-});
-
-JSONEditor.defaults.iconlibs.foundation2 = JSONEditor.AbstractIconLib.extend({
-  mapping: {
-    collapse: 'minus',
-    expand: 'plus',
-    delete: 'remove',
-    edit: 'edit',
-    add: 'add-doc',
-    cancel: 'error',
-    save: 'checkmark',
-    moveup: 'up-arrow',
-    movedown: 'down-arrow'
-  },
-  icon_prefix: 'foundicon-'
-});
-
-JSONEditor.defaults.iconlibs.foundation3 = JSONEditor.AbstractIconLib.extend({
-  mapping: {
-    collapse: 'minus',
-    expand: 'plus',
-    delete: 'x',
-    edit: 'pencil',
-    add: 'page-add',
-    cancel: 'x-circle',
-    save: 'save',
-    moveup: 'arrow-up',
-    movedown: 'arrow-down'
-  },
-  icon_prefix: 'fi-'
-});
-
-JSONEditor.defaults.iconlibs.jqueryui = JSONEditor.AbstractIconLib.extend({
-  mapping: {
-    collapse: 'triangle-1-s',
-    expand: 'triangle-1-e',
-    delete: 'trash',
-    edit: 'pencil',
-    add: 'plusthick',
-    cancel: 'closethick',
-    save: 'disk',
-    moveup: 'arrowthick-1-n',
-    movedown: 'arrowthick-1-s'
-  },
-  icon_prefix: 'ui-icon ui-icon-'
-});
-
 JSONEditor.defaults.templates.javascript = function() {
   return {
     compile: function(template) {
@@ -3451,37 +2642,16 @@ JSONEditor.defaults.templates.javascript = function() {
 };
 
 // Set the default theme
-JSONEditor.defaults.theme = 'html';
+JSONEditor.defaults.theme = 'bootstrap3';
+
+// Set the default icon library
+JSONEditor.defaults.iconlib = 'bootstrap3';
 
 // Set the default template engine
 JSONEditor.defaults.template = 'javascript';
 
 // Default options when initializing JSON Editor
 JSONEditor.defaults.options = {};
-
-// String translate function
-JSONEditor.defaults.translate = function(key, variables) {
-  var lang = JSONEditor.defaults.languages[JSONEditor.defaults.language];
-  if(!lang) throw "Unknown language "+JSONEditor.defaults.language;
-  
-  var string = lang[key] || JSONEditor.defaults.languages[JSONEditor.defaults.default_language][key];
-  
-  if(typeof string === "undefined") throw "Unknown translate string "+key;
-  
-  if(variables) {
-    for(var i=0; i<variables.length; i++) {
-      string = string.replace(new RegExp('\\{\\{'+i+'}}','g'),variables[i]);
-    }
-  }
-  
-  return string;
-};
-
-// Translation strings and default languages
-JSONEditor.defaults.default_language = 'en';
-JSONEditor.defaults.language = JSONEditor.defaults.default_language;
-JSONEditor.defaults.languages.en = {
-};
 
 // Default per-editor options
 for(var i in JSONEditor.defaults.editors) {
