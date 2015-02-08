@@ -1,15 +1,5 @@
 // Multiple Editor (for when `type` is an array)
 JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
-  enable: function() {
-    this.editor.enable();
-    this.switcher.disabled = false;
-    this._super();
-  },
-  disable: function() {
-    this.editor.disable();
-    this.switcher.disabled = true;
-    this._super();
-  },
   switchEditor: function(i) {
     var self = this;
     

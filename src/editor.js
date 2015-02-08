@@ -285,14 +285,5 @@ JSONEditor.AbstractEditor = Class.extend({
   },
   getTitle: function() {
     return this.schema.title || this.key;
-  },
-  enable: function() {
-    this.disabled = false;
-  },
-  disable: function() {
-    this.disabled = true;
-  },
-  isEnabled: function() {
-    return !this.disabled;
   }
 });

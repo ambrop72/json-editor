@@ -1,6 +1,5 @@
 JSONEditor.defaults.editors.derived = JSONEditor.AbstractEditor.extend({
     buildImpl: function() {
-        this.always_disabled = true;
         if ($utils.has(this.schema, 'valueTemplate')) {
             this.derived_mode = 'template';
             this.template = this.jsoneditor.compileTemplate(this.schema.valueTemplate, this.template_engine);

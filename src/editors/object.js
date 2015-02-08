@@ -2,20 +2,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   getDefault: function() {
     return this.schema.default || {};
   },
-  enable: function() {
-    this._super();
-    for(var i in this.editors) {
-      if(!this.editors.hasOwnProperty(i)) continue;
-      this.editors[i].enable();
-    }
-  },
-  disable: function() {
-    this._super();
-    for(var i in this.editors) {
-      if(!this.editors.hasOwnProperty(i)) continue;
-      this.editors[i].disable();
-    }
-  },
   layoutEditors: function() {
     var self = this, i, j;
     

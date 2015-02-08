@@ -179,15 +179,6 @@ JSONEditor.prototype = {
     for(var i=0; i<this.watchlist[path].length; i++) {
       this.watchlist[path][i]();
     }
-  },
-  isEnabled: function() {
-    return !this.root || this.root.isEnabled();
-  },
-  enable: function() {
-    this.root.enable();
-  },
-  disable: function() {
-    this.root.disable();
   }
 };
 

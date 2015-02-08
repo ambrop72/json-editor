@@ -74,7 +74,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     }
 
     if(this.schema.readOnly || this.schema.readonly) {
-      this.always_disabled = true;
       this.input.disabled = true;
     }
 
@@ -102,16 +101,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     this.refreshValue();
     
     this.theme.afterInputReady(this.input);
-  },
-  enable: function() {
-    if(!this.always_disabled) {
-      this.input.disabled = false;
-    }
-    this._super();
-  },
-  disable: function() {
-    this.input.disabled = true;
-    this._super();
   },
   refreshValue: function() {
     this.value = this.input.value;

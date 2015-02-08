@@ -74,7 +74,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     this.input.setAttribute('name',this.formname);
 
     if(this.schema.readOnly || this.schema.readonly) {
-      this.always_disabled = true;
       this.input.disabled = true;
     }
 
@@ -140,16 +139,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
         this.onChange();
       }
     }
-  },
-  enable: function() {
-    if(!this.always_disabled) {
-      this.input.disabled = false;
-    }
-    this._super();
-  },
-  disable: function() {
-    this.input.disabled = true;
-    this._super();
   },
   destroyImpl: function() {
     if(this.label && this.label.parentNode) this.label.parentNode.removeChild(this.label);
