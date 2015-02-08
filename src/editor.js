@@ -25,7 +25,7 @@ JSONEditor.AbstractEditor = Class.extend({
     this.template_engine = this.jsoneditor.template;
     this.iconlib = this.jsoneditor.iconlib;
     this.schema = options.schema;
-    this.options = $extendPersistent((options.schema.options || {}), options);
+    this.options = $utils.extend((options.schema.options || {}), options);
     this.path = options.path || 'root';
     this.formname = options.formname || this.path.replace(/\.([^.]+)/g,'[$1]');
     if(this.jsoneditor.options.form_name_root) this.formname = this.formname.replace(/^root\[/,this.jsoneditor.options.form_name_root+'[');
@@ -164,7 +164,7 @@ JSONEditor.AbstractEditor = Class.extend({
     
     var vars;
     if(this.header_template) {      
-      vars = $extendPersistent(this.getWatchedFieldValues(), {
+      vars = $utils.extend(this.getWatchedFieldValues(), {
         key: this.key,
         i: this.key,
         i0: (this.key*1),
@@ -245,7 +245,7 @@ JSONEditor.AbstractEditor = Class.extend({
   destroy: function() {
     var self = this;
     self.destroyImpl();
-    $each(this.watched,function(name,adjusted_path) {
+    $utils.each(this.watched,function(name,adjusted_path) {
       self.jsoneditor.doUnwatch(adjusted_path,self.watch_listener);
     });
     this.jsoneditor.unregisterEditor(this);

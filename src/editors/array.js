@@ -86,7 +86,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     return this.item_title;
   },
   getElementEditor: function(i) {
-    var schema = $extendPersistent(this.schema.items, {
+    var schema = $utils.extend(this.schema.items, {
       title: this.getItemTitle() + ' ' + (i + 1)
     });
 
@@ -131,7 +131,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   empty: function() {
     if(!this.rows) return;
     var self = this;
-    $each(this.rows,function(i,row) {
+    $utils.each(this.rows,function(i,row) {
       self.destroyRow(row);
       self.rows[i] = null;
     });
@@ -149,7 +149,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     if(!(Array.isArray(value))) value = [value];
     
     var self = this;
-    $each(value,function(i,val) {
+    $utils.each(value,function(i,val) {
       if (self.rows[i]) {
         self.rows[i].setValue(val);
       } else {
@@ -169,7 +169,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   },
   getFinalValue: function() {
     var result = [];
-    $each(this.rows,function(i,editor) {
+    $utils.each(this.rows,function(i,editor) {
       result[i] = editor.getFinalValue();
     });
     return result;
@@ -182,7 +182,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     var force = self.force_refresh;
     self.force_refresh = false;
 
-    $each(this.rows,function(i,editor) {
+    $utils.each(this.rows,function(i,editor) {
       // Get the value for this editor
       self.value[i] = editor.getValue();
     });
@@ -195,7 +195,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     var self = this;
     
     var need_row_buttons = false;
-    $each(this.rows,function(i,editor) {
+    $utils.each(this.rows,function(i,editor) {
       // Hide the move down button for the last row
       if(editor.movedown_button) {
         if(i === self.rows.length - 1) {
@@ -268,7 +268,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         var value = self.getValue();
 
         var newval = [];
-        $each(value,function(j,row) {
+        $utils.each(value,function(j,row) {
           if(j===i) {
             return; // If this is the one we're deleting
           }

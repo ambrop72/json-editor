@@ -41,7 +41,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     if(this.schema.enum) {
       var display = this.schema.options && this.schema.options.enum_titles || [];
       
-      $each(this.schema.enum,function(i,option) {
+      $utils.each(this.schema.enum,function(i,option) {
         self.enum_options[i] = ""+option;
         self.enum_display[i] = ""+(display[i] || option);
         self.enum_values[i] = self.typecast(option);

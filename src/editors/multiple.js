@@ -52,13 +52,13 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
     var self = this;
     
     // basic checks
-    if (!Array.isArray($get(this.schema, 'oneOf'))) {
+    if (!Array.isArray($utils.get(this.schema, 'oneOf'))) {
       throw "'multiple' editor requires an array 'oneOf'";
     }
     if (this.schema.oneOf.length === 0) {
       throw "'multiple' editor requires non-empty 'oneOf'";
     }
-    if (!$has(this.schema, 'selectKey')) {
+    if (!$utils.has(this.schema, 'selectKey')) {
       throw "'multiple' editor requires 'selectKey'";
     }
 
@@ -72,15 +72,15 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
     var select_titles = [];
     var select_indices = [];
     
-    $each(this.child_schemas, function(i, schema) {
-      var selectValue = $getNested(schema, 'properties', self.select_key, 'constantValue');
-      if ($isUndefined(selectValue)) {
+    $utils.each(this.child_schemas, function(i, schema) {
+      var selectValue = $utils.getNested(schema, 'properties', self.select_key, 'constantValue');
+      if ($utils.isUndefined(selectValue)) {
         self.debugPrint(schema);
         throw "'multiple' editor requires each 'oneOf' schema to have properties.(selectKey).constantValue";
       }
       self.select_values.push(selectValue);
       select_indices.push(i);
-      var title = $has(schema, 'title') ? schema.title : selectValue;
+      var title = $utils.has(schema, 'title') ? schema.title : selectValue;
       select_titles.push(title);
     });
     
@@ -123,9 +123,9 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
     
     // Determine the type by looking at the value of the selectKey property.
     var type = 0;
-    if ($isObject(val) && $has(val, self.select_key)) {
+    if ($utils.isObject(val) && $utils.has(val, self.select_key)) {
       var the_select_value = val[self.select_key];
-      $each(self.select_values, function(i, select_value) {
+      $utils.each(self.select_values, function(i, select_value) {
         if (select_value === the_select_value) {
           type = i;
           return false;

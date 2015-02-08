@@ -42,8 +42,8 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     this.panel.appendChild(this.controls);
 
     if(this.item_has_child_editors) {
-      var ordered = $orderProperties(item_schema.properties, function(i) { return item_schema.properties[i].propertyOrder; });
-      $each(ordered, function(index, prop_name) {
+      var ordered = $utils.orderProperties(item_schema.properties, function(i) { return item_schema.properties[i].propertyOrder; });
+      $utils.each(ordered, function(index, prop_name) {
         var prop_schema = item_schema.properties[prop_name];
         var title = prop_schema.title ? prop_schema.title : prop_name;
         var th = self.theme.getTableHeaderCell(title);
@@ -114,7 +114,7 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     var numrows_changed = false;
 
     var self = this;
-    $each(value,function(i,val) {
+    $utils.each(value,function(i,val) {
       if(self.rows[i]) {
         self.rows[i].setValue(val);
       }
@@ -149,7 +149,7 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
   },
   refreshButtonsExtra: function(need_row_buttons, controls_needed) {
     // Show/hide controls column in table
-    $each(this.rows,function(i,editor) {
+    $utils.each(this.rows,function(i,editor) {
       editor.controls_cell.style.display = need_row_buttons ? '' : 'none';
     });
     this.controls_header_cell.style.display = need_row_buttons ? '' : 'none';
@@ -160,7 +160,7 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     var self = this;
     this.value = [];
 
-    $each(this.rows,function(i,editor) {
+    $utils.each(this.rows,function(i,editor) {
       // Get the value for this editor
       self.value[i] = editor.getValue();
     });

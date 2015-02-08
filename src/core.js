@@ -1,6 +1,6 @@
 var JSONEditor = function(element,options) {
   this.element = element;
-  this.options = $extendPersistent(JSONEditor.defaults.options, options || {});
+  this.options = $utils.extend(JSONEditor.defaults.options, options || {});
   this.init();
 };
 JSONEditor.prototype = {
@@ -91,7 +91,7 @@ JSONEditor.prototype = {
   getEditorClass: function(schema) {
     var classname;
 
-    $each(JSONEditor.defaults.resolvers,function(i,resolver) {
+    $utils.each(JSONEditor.defaults.resolvers,function(i,resolver) {
       var tmp = resolver(schema);
       if(tmp && JSONEditor.defaults.editors[tmp]) {
         classname = tmp;
@@ -105,7 +105,7 @@ JSONEditor.prototype = {
   },
   createEditor: function(editor_class, options) {
     if (editor_class.options) {
-      options = $extendPersistent(editor_class.options, options);
+      options = $utils.extend(editor_class.options, options);
     }
     return new editor_class(options);
   },

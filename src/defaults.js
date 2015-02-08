@@ -54,7 +54,7 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
 });
 // Use the `derived` editor if it has the right config.
 JSONEditor.defaults.resolvers.unshift(function(schema) {
-  if($has(schema, 'valueTemplate') || $has(schema, 'constantValue')) {
+  if($utils.has(schema, 'valueTemplate') || $utils.has(schema, 'constantValue')) {
     return "derived";
   }
 });

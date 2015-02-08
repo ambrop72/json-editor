@@ -22,7 +22,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     if(!this.row_container) return;
 
     var container = document.createElement('div');
-    $each(this.computeOrder(), function(i,key) {
+    $utils.each(this.computeOrder(), function(i,key) {
       var editor = self.editors[key];
       var row = self.theme.getGridRow();
       container.appendChild(row);
@@ -114,7 +114,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
 
     // Fix table cell ordering
     if(this.options.table_row) {
-      $each(this.computeOrder(), function(i,key) {
+      $utils.each(this.computeOrder(), function(i,key) {
         self.editor_holder.appendChild(self.editors[key].container);
       });
     }
@@ -137,7 +137,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     var schema = self.schema_properties[name];
     var editor = self.jsoneditor.getEditorClass(schema);
     self.editor_holder.appendChild(holder);
-    self.editors[name] = self.jsoneditor.createEditor(editor, $extendPersistent({
+    self.editors[name] = self.jsoneditor.createEditor(editor, $utils.extend({
       jsoneditor: self.jsoneditor,
       schema: schema,
       path: self.path+'.'+name,
@@ -157,7 +157,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     this.onChange();
   },
   destroyImpl: function() {
-    $each(this.editors, function(i,el) {
+    $utils.each(this.editors, function(i,el) {
       el.destroy();
     });
     if(this.editor_holder) this.editor_holder.innerHTML = '';
@@ -201,7 +201,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     var setActions = [];
 
     // First, set the values for all of the defined properties
-    $each(this.editors, function(i,editor) {
+    $utils.each(this.editors, function(i,editor) {
       // Value explicitly set
       if(typeof value[i] !== "undefined") {
         setActions.push({name: i, value: value[i]});
@@ -214,7 +214,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
 
     // For the initial value, we need to make sure we actually have the editors.
     if (initial) {
-      $each(self.schema_properties, function(i, schema) {
+      $utils.each(self.schema_properties, function(i, schema) {
         if (!self.editors.hasOwnProperty(i)) {
           setActions.push({name: i});
         }
@@ -222,7 +222,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     }
     
     // Add processingOrder to set-actions.
-    $each(setActions, function(ind,action) {
+    $utils.each(setActions, function(ind,action) {
       var i = action.name;
       action.processingOrder = 0;
       if (self.schema_properties && self.schema_properties[i] && typeof self.schema_properties[i].processingOrder !== "undefined") {
@@ -234,7 +234,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     setActions.sort(function(x,y) { return (x.processingOrder > y.processingOrder) - (x.processingOrder < y.processingOrder); });
     
     // Execute the set-actions.
-    $each(setActions, function(ind, action) {
+    $utils.each(setActions, function(ind, action) {
       var i = action.name;
       self.addObjectProperty(i);
       var set_value = action.hasOwnProperty('value') ? action.value : self.editors[i].getDefault();
@@ -247,7 +247,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   },
   computeOrder: function() {
     var self = this;
-    return $orderProperties(self.editors, function(i) { return self.editors[i].schema.propertyOrder; });
+    return $utils.orderProperties(self.editors, function(i) { return self.editors[i].schema.propertyOrder; });
   },
   toggleCollapsed: function() {
     var self = this;
