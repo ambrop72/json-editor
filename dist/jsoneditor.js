@@ -89,7 +89,9 @@ var Class;
 	  };
 	}
 }());
-var $isplainobject = function( obj ) {
+var $utils = {
+
+isplainobject: function( obj ) {
   // Not own constructor property must be Object
   if ( obj.constructor &&
     !obj.hasOwnProperty('constructor') &&
@@ -104,9 +106,9 @@ var $isplainobject = function( obj ) {
   for ( key in obj ) {}
 
   return key === undefined || obj.hasOwnProperty(key);
-};
+},
 
-var $shallowCopy = function(obj) {
+shallowCopy: function(obj) {
   var res = {};
   for (var property in obj) {
     if (!obj.hasOwnProperty(property)) {
@@ -115,21 +117,21 @@ var $shallowCopy = function(obj) {
     res[property] = obj[property];
   }
   return res;
-};
+},
 
-var $isEmpty = function(obj) {
+isEmpty: function(obj) {
   for (var property in obj) {
     if (obj.hasOwnProperty(property)) {
       return false;
     }
   }
   return true;
-};
+},
 
-var $extendPersistentArr = function(obj, sources, sources_start) {
+extendExt: function(obj, sources, sources_start) {
   // optimization for empty obj
-  if ($isEmpty(obj) && sources.length > sources_start) {
-    return $extendPersistentArr(sources[sources_start], sources, sources_start + 1);
+  if ($utils.isEmpty(obj) && sources.length > sources_start) {
+    return $utils.extendExt(sources[sources_start], sources, sources_start + 1);
   }
   
   // we'll make a copy of obj the first time we need to change it
@@ -145,8 +147,8 @@ var $extendPersistentArr = function(obj, sources, sources_start) {
       
       // compute new value of this property
       var new_value;
-      if (obj.hasOwnProperty(property) && $isplainobject(obj[property]) && $isplainobject(source[property])) {
-        new_value = $extendPersistentArr(obj[property], [source[property]], 0);
+      if (obj.hasOwnProperty(property) && $utils.isplainobject(obj[property]) && $utils.isplainobject(source[property])) {
+        new_value = $utils.extendExt(obj[property], [source[property]], 0);
       } else {
         new_value = source[property];
       }
@@ -154,7 +156,7 @@ var $extendPersistentArr = function(obj, sources, sources_start) {
       // possibly do the assigment of the new value to the old value
       if (!obj.hasOwnProperty(property) || new_value !== obj[property]) {
         if (!copied) {
-          obj = $shallowCopy(obj);
+          obj = $utils.shallowCopy(obj);
           copied = true;
         }
         obj[property] = new_value;
@@ -163,13 +165,13 @@ var $extendPersistentArr = function(obj, sources, sources_start) {
   }
   
   return obj;
-};
+},
 
-var $extendPersistent = function(obj) {
-  return $extendPersistentArr(obj, arguments, 1);
-};
+extend: function(obj) {
+  return $utils.extendExt(obj, arguments, 1);
+},
 
-var $each = function(obj,callback) {
+each: function(obj,callback) {
   if(!obj) return;
   var i;
   if(Array.isArray(obj)) {
@@ -183,17 +185,17 @@ var $each = function(obj,callback) {
       if(callback(i,obj[i])===false) return;
     }
   }
-};
+},
 
-var $has = function(obj, property) {
+has: function(obj, property) {
   return obj.hasOwnProperty(property);
-};
+},
 
-var $get = function(obj, property) {
+get: function(obj, property) {
   return obj.hasOwnProperty(property) ? obj[property] : undefined;
-};
+},
 
-var $getNested = function(obj) {
+getNested: function(obj) {
   for (var i = 1; i < arguments.length; i++) {
     if (!obj.hasOwnProperty(arguments[i])) {
       return undefined;
@@ -201,17 +203,17 @@ var $getNested = function(obj) {
     obj = obj[arguments[i]];
   }
   return obj;
-};
+},
 
-var $isUndefined = function(x) {
+isUndefined: function(x) {
   return (typeof x === 'undefined');
-};
+},
 
-var $isObject = function(x) {
+isObject: function(x) {
   return (x !== null && typeof x === 'object');
-};
+},
 
-var $orderProperties = function(obj, get_order_func) {
+orderProperties: function(obj, get_order_func) {
   var property_order = Object.keys(obj);
   property_order = property_order.sort(function(a,b) {
     var ordera = get_order_func(a);
@@ -221,11 +223,13 @@ var $orderProperties = function(obj, get_order_func) {
     return ordera - orderb;
   });
   return property_order;
+}
+
 };
 
 var JSONEditor = function(element,options) {
   this.element = element;
-  this.options = $extendPersistent(JSONEditor.defaults.options, options || {});
+  this.options = $utils.extend(JSONEditor.defaults.options, options || {});
   this.init();
 };
 JSONEditor.prototype = {
@@ -316,7 +320,7 @@ JSONEditor.prototype = {
   getEditorClass: function(schema) {
     var classname;
 
-    $each(JSONEditor.defaults.resolvers,function(i,resolver) {
+    $utils.each(JSONEditor.defaults.resolvers,function(i,resolver) {
       var tmp = resolver(schema);
       if(tmp && JSONEditor.defaults.editors[tmp]) {
         classname = tmp;
@@ -330,7 +334,7 @@ JSONEditor.prototype = {
   },
   createEditor: function(editor_class, options) {
     if (editor_class.options) {
-      options = $extendPersistent(editor_class.options, options);
+      options = $utils.extend(editor_class.options, options);
     }
     return new editor_class(options);
   },
@@ -404,15 +408,6 @@ JSONEditor.prototype = {
     for(var i=0; i<this.watchlist[path].length; i++) {
       this.watchlist[path][i]();
     }
-  },
-  isEnabled: function() {
-    return !this.root || this.root.isEnabled();
-  },
-  enable: function() {
-    this.root.enable();
-  },
-  disable: function() {
-    this.root.disable();
   }
 };
 
@@ -451,7 +446,7 @@ JSONEditor.AbstractEditor = Class.extend({
     this.template_engine = this.jsoneditor.template;
     this.iconlib = this.jsoneditor.iconlib;
     this.schema = options.schema;
-    this.options = $extendPersistent((options.schema.options || {}), options);
+    this.options = $utils.extend((options.schema.options || {}), options);
     this.path = options.path || 'root';
     this.formname = options.formname || this.path.replace(/\.([^.]+)/g,'[$1]');
     if(this.jsoneditor.options.form_name_root) this.formname = this.formname.replace(/^root\[/,this.jsoneditor.options.form_name_root+'[');
@@ -590,7 +585,7 @@ JSONEditor.AbstractEditor = Class.extend({
     
     var vars;
     if(this.header_template) {      
-      vars = $extendPersistent(this.getWatchedFieldValues(), {
+      vars = $utils.extend(this.getWatchedFieldValues(), {
         key: this.key,
         i: this.key,
         i0: (this.key*1),
@@ -671,7 +666,7 @@ JSONEditor.AbstractEditor = Class.extend({
   destroy: function() {
     var self = this;
     self.destroyImpl();
-    $each(this.watched,function(name,adjusted_path) {
+    $utils.each(this.watched,function(name,adjusted_path) {
       self.jsoneditor.doUnwatch(adjusted_path,self.watch_listener);
     });
     this.jsoneditor.unregisterEditor(this);
@@ -711,15 +706,6 @@ JSONEditor.AbstractEditor = Class.extend({
   },
   getTitle: function() {
     return this.schema.title || this.key;
-  },
-  enable: function() {
-    this.disabled = false;
-  },
-  disable: function() {
-    this.disabled = true;
-  },
-  isEnabled: function() {
-    return !this.disabled;
   }
 });
 
@@ -762,12 +748,10 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     if(this.format) {
       // Text Area
       if(this.format === 'textarea') {
-        this.input_type = 'textarea';
         this.input = this.theme.getTextareaInput();
       }
       // Range Input
       else if(this.format === 'range') {
-        this.input_type = 'range';
         var min = this.schema.minimum || 0;
         var max = this.schema.maximum || Math.max(100,min+1);
         var step = 1;
@@ -781,14 +765,12 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
       }
       // HTML5 Input type
       else {
-        this.input_type = this.format;
-        this.input = this.theme.getFormInputField(this.input_type);
+        this.input = this.theme.getFormInputField(this.format);
       }
     }
     // Normal text input
     else {
-      this.input_type = 'text';
-      this.input = this.theme.getFormInputField(this.input_type);
+      this.input = this.theme.getFormInputField('text');
     }
     
     this.input.setAttribute('name',this.formname);
@@ -803,7 +785,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     }
 
     if(this.schema.readOnly || this.schema.readonly) {
-      this.always_disabled = true;
       this.input.disabled = true;
     }
 
@@ -831,16 +812,6 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     this.refreshValue();
     
     this.theme.afterInputReady(this.input);
-  },
-  enable: function() {
-    if(!this.always_disabled) {
-      this.input.disabled = false;
-    }
-    this._super();
-  },
-  disable: function() {
-    this.input.disabled = true;
-    this._super();
   },
   refreshValue: function() {
     this.value = this.input.value;
@@ -879,45 +850,21 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   getDefault: function() {
     return this.schema.default || {};
   },
-  enable: function() {
-    this._super();
-    for(var i in this.editors) {
-      if(!this.editors.hasOwnProperty(i)) continue;
-      this.editors[i].enable();
-    }
-  },
-  disable: function() {
-    this._super();
-    for(var i in this.editors) {
-      if(!this.editors.hasOwnProperty(i)) continue;
-      this.editors[i].disable();
-    }
-  },
-  layoutEditors: function() {
-    var self = this, i, j;
-    
-    if(!this.row_container) return;
-
-    var container = document.createElement('div');
-    $each(this.computeOrder(), function(i,key) {
-      var editor = self.editors[key];
-      var row = self.theme.getGridRow();
-      container.appendChild(row);
-      
-      if(editor.options.hidden) editor.container.style.display = 'none';
-      else self.theme.setGridColumnSize(editor.container,12);
-      editor.container.className += ' container-' + key;
-      row.appendChild(editor.container);
-    });
-    
-    this.row_container.innerHTML = '';
-    this.row_container.appendChild(container);
-  },
   buildImpl: function() {
-    this.editors = {};
     var self = this;
 
+    // Get the properties from the schema.
     this.schema_properties = this.schema.properties || {};
+    
+    // Built a list of properties sorted by processingOrder.
+    var order_func = function(name) {
+      var processingOrder = self.schema_properties[name].processingOrder;
+      return typeof processingOrder === 'number' ? processingOrder : 0;
+    };
+    this.processing_order = Object.keys(self.schema_properties);
+    this.processing_order.sort(function(a, b) {
+      return order_func(a) - order_func(b);
+    });
 
     // If the object should be rendered as a table row
     if(this.options.table_row) {
@@ -925,8 +872,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     }
     // If the object should be rendered as a div
     else {
-      this.defaultProperties = this.schema.defaultProperties || Object.keys(this.schema_properties);
-
       // Text label
       this.header = document.createElement('span');
       this.header.textContent = this.getTitle();
@@ -950,6 +895,10 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       // Container for rows of child editors
       this.row_container = this.theme.getGridContainer();
       this.editor_holder.appendChild(this.row_container);
+      
+      // The div with editors.
+      this.editors_div = document.createElement('div');
+      this.row_container.appendChild(this.editors_div);
 
       // Control buttons
       this.title_controls = this.theme.getHeaderButtonHolder();
@@ -986,55 +935,62 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       }
     }
     
-    // Set the initial value, creating editors.
-    this.mySetValue({}, true);
-
-    // Fix table cell ordering
-    if(this.options.table_row) {
-      $each(this.computeOrder(), function(i,key) {
-        self.editor_holder.appendChild(self.editors[key].container);
-      });
-    }
-  },
-  addObjectProperty: function(name) {
-    var self = this;
+    // Create editors.
+    this.editors = {};
+    $utils.each(this.processing_order, function(i, name) {
+      var holder;
+      var extra_opts = {};
+      if (self.options.table_row) {
+        holder = self.theme.getTableCell();
+        extra_opts.compact = true;
+      } else {
+        holder = self.theme.getChildEditorHolder();
+      }
+      
+      var schema = self.schema_properties[name];
+      var editor = self.jsoneditor.getEditorClass(schema);
+      self.editors[name] = self.jsoneditor.createEditor(editor, $utils.extend({
+        jsoneditor: self.jsoneditor,
+        schema: schema,
+        path: self.path+'.'+name,
+        parent: self,
+        container: holder
+      }, extra_opts));
+      self.editors[name].build();
+    });
     
-    // Property is already added
-    if(this.editors[name]) return;
+    // Compute the display order.
+    var display_order = $utils.orderProperties(self.editors, function(i) { return self.editors[i].schema.propertyOrder; });
     
-    var holder;
-    var extra_opts = {};
-    if (self.options.table_row) {
-      holder = self.theme.getTableCell();
-      extra_opts.compact = true;
-    } else {
-      holder = self.theme.getChildEditorHolder();
-    }
-    
-    var schema = self.schema_properties[name];
-    var editor = self.jsoneditor.getEditorClass(schema);
-    self.editor_holder.appendChild(holder);
-    self.editors[name] = self.jsoneditor.createEditor(editor, $extendPersistent({
-      jsoneditor: self.jsoneditor,
-      schema: schema,
-      path: self.path+'.'+name,
-      parent: self,
-      container: holder
-    }, extra_opts));
-    self.editors[name].build();
-    
-    if (self.options.table_row) {
-      if (self.editors[name].options.hidden) {
+    // Display the editors.
+    $utils.each(display_order, function(i, name) {
+      var editor = self.editors[name];
+      var holder = editor.container;
+      if (editor.options.hidden) {
         holder.style.display = 'none';
       }
-    }
+      if (self.options.table_row) {
+        self.editor_holder.appendChild(holder);
+      } else {
+        var row = self.theme.getGridRow();
+        self.editors_div.appendChild(row);
+        if (!editor.options.hidden) {
+          self.theme.setGridColumnSize(holder, 12);
+        }
+        editor.container.className += ' container-' + name;
+        row.appendChild(holder);
+      }
+    });
+    
+    // Set the initial value.
+    this.setValueImpl({});
   },
   onChildEditorChange: function(editor) {
     this.refreshValue();
     this.onChange();
   },
   destroyImpl: function() {
-    $each(this.editors, function(i,el) {
+    $utils.each(this.editors, function(i,el) {
       el.destroy();
     });
     if(this.editor_holder) this.editor_holder.innerHTML = '';
@@ -1058,73 +1014,27 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   },
   refreshValue: function() {
     this.value = {};
-    var self = this;
-    
     for(var i in this.editors) {
       if(!this.editors.hasOwnProperty(i)) continue;
       this.value[i] = this.editors[i].getValue();
     }
   },
   setValueImpl: function(value) {
-    this.mySetValue(value, false);
-  },
-  mySetValue: function(value, initial) {
     var self = this;
+    
     value = value || {};
-    
-    if(typeof value !== "object" || Array.isArray(value)) value = {};
-    
-    // Collect set-actions here so we can sort them.
-    var setActions = [];
-
-    // First, set the values for all of the defined properties
-    $each(this.editors, function(i,editor) {
-      // Value explicitly set
-      if(typeof value[i] !== "undefined") {
-        setActions.push({name: i, value: value[i]});
-      }
-      // Otherwise, set the value to the default
-      else {
-        setActions.push({name: i});
-      }
-    });
-
-    // For the initial value, we need to make sure we actually have the editors.
-    if (initial) {
-      $each(self.schema_properties, function(i, schema) {
-        if (!self.editors.hasOwnProperty(i)) {
-          setActions.push({name: i});
-        }
-      });
+    if (typeof value !== "object" || Array.isArray(value)) {
+      value = {};
     }
     
-    // Add processingOrder to set-actions.
-    $each(setActions, function(ind,action) {
-      var i = action.name;
-      action.processingOrder = 0;
-      if (self.schema_properties && self.schema_properties[i] && typeof self.schema_properties[i].processingOrder !== "undefined") {
-        action.processingOrder = self.schema_properties[i].processingOrder;
-      }
+    // Set the editor values.
+    $utils.each(this.processing_order, function(i, name) {
+      var prop_value = $utils.has(value, name) ? value[name] : self.editors[name].getDefault();
+      self.editors[name].setValue(prop_value);
     });
-    
-    // Sort the set-actions.
-    setActions.sort(function(x,y) { return (x.processingOrder > y.processingOrder) - (x.processingOrder < y.processingOrder); });
-    
-    // Execute the set-actions.
-    $each(setActions, function(ind, action) {
-      var i = action.name;
-      self.addObjectProperty(i);
-      var set_value = action.hasOwnProperty('value') ? action.value : self.editors[i].getDefault();
-      self.editors[i].setValue(set_value);
-    });
-    
+
     this.refreshValue();
-    this.layoutEditors();
     this.onChange();
-  },
-  computeOrder: function() {
-    var self = this;
-    return $orderProperties(self.editors, function(i) { return self.editors[i].schema.propertyOrder; });
   },
   toggleCollapsed: function() {
     var self = this;
@@ -1144,44 +1054,32 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   getDefault: function() {
     return this.schema.default || [];
   },
-  enable: function() {
-    if(this.add_row_button) this.add_row_button.disabled = false;
-    if(this.remove_all_rows_button) this.remove_all_rows_button.disabled = false;
-    
-    for(var i=0; i<this.rows.length; i++) {
-      this.rows[i].enable();
-      
-      if(this.rows[i].moveup_button) this.rows[i].moveup_button.disabled = false;
-      if(this.rows[i].movedown_button) this.rows[i].movedown_button.disabled = false;
-      if(this.rows[i].delete_button) this.rows[i].delete_button.disabled = false;
-    }
-    this._super();
-  },
-  disable: function() {
-    if(this.add_row_button) this.add_row_button.disabled = true;
-    if(this.remove_all_rows_button) this.remove_all_rows_button.disabled = true;
-
-    for(var i=0; i<this.rows.length; i++) {
-      this.rows[i].disable();
-      
-      if(this.rows[i].moveup_button) this.rows[i].moveup_button.disabled = true;
-      if(this.rows[i].movedown_button) this.rows[i].movedown_button.disabled = true;
-      if(this.rows[i].delete_button) this.rows[i].delete_button.disabled = true;
-    }
-    this._super();
-  },
-  arrayBaseBuildImpl: function() {
+  buildImpl: function() {
     this.rows = [];
-    this.force_refresh = true;
+    this.buttons_dirty = true;
 
     this.hide_delete_buttons = this.options.disable_array_delete || this.jsoneditor.options.disable_array_delete;
     this.hide_move_buttons = this.options.disable_array_reorder || this.jsoneditor.options.disable_array_reorder;
+    this.hide_copy_buttons = this.options.hide_copy_buttons || this.jsoneditor.options.hide_copy_buttons;
     this.hide_add_button = this.options.disable_array_add || this.jsoneditor.options.disable_array_add;
-  },
-  buildImpl: function() {
-    var self = this;
     
-    self.arrayBaseBuildImpl();
+    if ($utils.has(this.schema, 'copyTemplate')) {
+      this.copy_template = this.jsoneditor.compileTemplate(this.schema.copyTemplate, this.template_engine);
+    }
+    
+    this.arrayBuildImpl();
+
+    this.addControls();
+    this.setValueImpl([]);
+  },
+  destroyImpl: function() {
+    this.arrayDestroyImpl();
+    
+    this.empty();
+    this.rows = null;
+  },
+  arrayBuildImpl: function() {
+    var self = this;
     
     if(!this.options.compact) {
       this.header = document.createElement('span');
@@ -1210,12 +1108,15 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         this.row_holder = document.createElement('div');
         this.panel.appendChild(this.row_holder);
     }
-
-    // Add controls
-    this.addControls();
+  },
+  arrayDestroyImpl: function() {
+    if(this.title && this.title.parentNode) this.title.parentNode.removeChild(this.title);
+    if(this.description && this.description.parentNode) this.description.parentNode.removeChild(this.description);
+    if(this.row_holder && this.row_holder.parentNode) this.row_holder.parentNode.removeChild(this.row_holder);
+    if(this.controls && this.controls.parentNode) this.controls.parentNode.removeChild(this.controls);
+    if(this.panel && this.panel.parentNode) this.panel.parentNode.removeChild(this.panel);
     
-    // Set initial value.
-    this.setValueImpl([]);
+    this.title = this.description = this.row_holder = this.panel = this.controls = null;
   },
   onChildEditorChange: function(editor) {
     this.refreshValue();
@@ -1228,7 +1129,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     return this.item_title;
   },
   getElementEditor: function(i) {
-    var schema = $extendPersistent(this.schema.items, {
+    var schema = $utils.extend(this.schema.items, {
       title: this.getItemTitle() + ' ' + (i + 1)
     });
 
@@ -1260,20 +1161,9 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     
     return ret;
   },
-  destroyImpl: function() {
-    this.empty(true);
-    if(this.title && this.title.parentNode) this.title.parentNode.removeChild(this.title);
-    if(this.description && this.description.parentNode) this.description.parentNode.removeChild(this.description);
-    if(this.row_holder && this.row_holder.parentNode) this.row_holder.parentNode.removeChild(this.row_holder);
-    if(this.controls && this.controls.parentNode) this.controls.parentNode.removeChild(this.controls);
-    if(this.panel && this.panel.parentNode) this.panel.parentNode.removeChild(this.panel);
-    
-    this.rows = this.title = this.description = this.row_holder = this.panel = this.controls = null;
-  },
   empty: function() {
-    if(!this.rows) return;
     var self = this;
-    $each(this.rows,function(i,row) {
+    $utils.each(this.rows,function(i,row) {
       self.destroyRow(row);
       self.rows[i] = null;
     });
@@ -1282,16 +1172,17 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   destroyRow: function(row) {
     var holder = row.container;
     row.destroy();
-    if(holder.parentNode) holder.parentNode.removeChild(holder);
+    if (holder.parentNode) {
+      holder.parentNode.removeChild(holder);
+    }
   },
   setValueImpl: function(value) {
-    // Update the array's value, adding/removing rows when necessary
-    value = value || [];
+    var self = this;
     
+    value = value || [];
     if(!(Array.isArray(value))) value = [value];
     
-    var self = this;
-    $each(value,function(i,val) {
+    $utils.each(value,function(i,val) {
       if (self.rows[i]) {
         self.rows[i].setValue(val);
       } else {
@@ -1306,38 +1197,41 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     self.rows = self.rows.slice(0,value.length);
 
     self.refreshValue();
+    self.refreshButtons();
 
     self.onChange();
   },
   getFinalValue: function() {
     var result = [];
-    $each(this.rows,function(i,editor) {
+    $utils.each(this.rows,function(i,editor) {
       result[i] = editor.getFinalValue();
     });
     return result;
   },
   refreshValue: function() {
     var self = this;
-    var oldi = this.value? this.value.length : 0;
-    this.value = [];
     
-    var force = self.force_refresh;
-    self.force_refresh = false;
-
-    $each(this.rows,function(i,editor) {
-      // Get the value for this editor
+    var oldi = this.value? this.value.length : 0;
+    
+    self.value = [];
+    $utils.each(this.rows,function(i,editor) {
       self.value[i] = editor.getValue();
     });
     
-    if(oldi !== this.value.length || force) {
-      self.refreshButtons();
+    if (oldi !== this.value.length) {
+      self.buttons_dirty = true;
     }
   },
   refreshButtons: function() {
     var self = this;
     
+    if (!self.buttons_dirty) {
+      return;
+    }
+    self.buttons_dirty = false;
+    
     var need_row_buttons = false;
-    $each(this.rows,function(i,editor) {
+    $utils.each(this.rows,function(i,editor) {
       // Hide the move down button for the last row
       if(editor.movedown_button) {
         if(i === self.rows.length - 1) {
@@ -1410,7 +1304,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         var value = self.getValue();
 
         var newval = [];
-        $each(value,function(j,row) {
+        $utils.each(value,function(j,row) {
           if(j===i) {
             return; // If this is the one we're deleting
           }
@@ -1427,6 +1321,32 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       }
     }
     
+    if(!self.hide_copy_buttons) {
+      self.rows[i].copy_button = this.getButton('','copy','Copy');
+      self.rows[i].copy_button.className += ' copy';
+      self.rows[i].copy_button.setAttribute('data-i',i);
+      self.rows[i].copy_button.addEventListener('click',function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var i = this.getAttribute('data-i')*1;
+
+        var rows = self.value.slice();
+        var new_row = rows[i];
+        if (self.copy_template) {
+          new_row = self.copy_template({rows: rows, index: i, row: new_row});
+        }
+        rows.splice(i + 1, 0, new_row);
+
+        self.withProcessingContext(function() {
+          self.setValueImpl(rows);
+        }, 'move_button_click');
+      });
+      
+      if(controls_holder) {
+        controls_holder.appendChild(self.rows[i].copy_button);
+      }
+    }
+
     if(i && !self.hide_move_buttons) {
       self.rows[i].moveup_button = this.getButton('','moveup','Move up');
       self.rows[i].moveup_button.className += ' moveup';
@@ -1452,7 +1372,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         controls_holder.appendChild(self.rows[i].movedown_button);
       }
     }
-
+    
     if(value) self.rows[i].setValue(value);
   },
   moveClickHandler: function(e, button, down) {
@@ -1528,9 +1448,9 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   },
   addRowButtonHandler: function() {
     var self = this;
-    var i = self.rows.length;
     self.addRow();
     self.refreshValue();
+    self.refreshButtons();
     self.onChange();
   },
   toggleSetup: function() {
@@ -1560,17 +1480,14 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
 });
 
 JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
-  buildImpl: function() {
+  arrayBuildImpl: function() {
     var self = this;
-    
-    self.arrayBaseBuildImpl();
     
     var item_schema = this.schema.items || {};
     
     this.item_title = item_schema.title || 'row';
     this.item_default = item_schema.default || null;
     this.item_has_child_editors = item_schema.properties;
-    this.initial = true;
     
     this.table = this.theme.getTable();
     this.container.appendChild(this.table);
@@ -1603,8 +1520,8 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     this.panel.appendChild(this.controls);
 
     if(this.item_has_child_editors) {
-      var ordered = $orderProperties(item_schema.properties, function(i) { return item_schema.properties[i].propertyOrder; });
-      $each(ordered, function(index, prop_name) {
+      var ordered = $utils.orderProperties(item_schema.properties, function(i) { return item_schema.properties[i].propertyOrder; });
+      $utils.each(ordered, function(index, prop_name) {
         var prop_schema = item_schema.properties[prop_name];
         var title = prop_schema.title ? prop_schema.title : prop_name;
         var th = self.theme.getTableHeaderCell(title);
@@ -1623,12 +1540,10 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     // Row Controls column
     this.controls_header_cell = self.theme.getTableHeaderCell(" ");
     self.header_row.appendChild(this.controls_header_cell);
-
-    // Add controls
-    this.addControls();
-    
-    // Set initial value.
-    this.setValueImpl([]);
+  },
+  arrayDestroyImpl: function() {
+    if(this.table && this.table.parentNode) this.table.parentNode.removeChild(this.table);
+    this.table = null;
   },
   getItemTitle: function() {
     return this.item_title;
@@ -1663,78 +1578,30 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     
     return ret;
   },
-  destroyImpl: function() {
-    this.innerHTML = '';
-    if(this.table && this.table.parentNode) this.table.parentNode.removeChild(this.table);
-    this.table = null;
-  },
-  setValueImpl: function(value) {
-    // Update the array's value, adding/removing rows when necessary
-    value = value || [];
-
-    var numrows_changed = false;
-
-    var self = this;
-    $each(value,function(i,val) {
-      if(self.rows[i]) {
-        self.rows[i].setValue(val);
-      }
-      else {
-        self.addRow(val);
-        numrows_changed = true;
-      }
-    });
-
-    for(var j=value.length; j<self.rows.length; j++) {
-      var holder = self.rows[j].container;
-      if(!self.item_has_child_editors) {
-        self.rows[j].row.parentNode.removeChild(self.rows[j].row);
-      }
-      self.rows[j].destroy();
-      if(holder.parentNode) holder.parentNode.removeChild(holder);
-      self.rows[j] = null;
-      numrows_changed = true;
+  destroyRow: function(row) {
+    var holder = row.container;
+    if(!this.item_has_child_editors) {
+      row.row.parentNode.removeChild(row.row);
     }
-    self.rows = self.rows.slice(0,value.length);
-
-    self.refreshValue();
-    if(numrows_changed || self.initial) self.refreshButtons();
-    self.initial = false;
-
-    self.onChange();
-          
-    // TODO: sortable
+    row.destroy();
+    if (holder.parentNode) {
+      holder.parentNode.removeChild(holder);
+    }
   },
   refreshButtonsExtraEditor: function(i, editor) {
     return !!editor.moveup_button;
   },
   refreshButtonsExtra: function(need_row_buttons, controls_needed) {
     // Show/hide controls column in table
-    $each(this.rows,function(i,editor) {
+    $utils.each(this.rows,function(i,editor) {
       editor.controls_cell.style.display = need_row_buttons ? '' : 'none';
     });
     this.controls_header_cell.style.display = need_row_buttons ? '' : 'none';
     this.table.style.display = this.value.length === 0 ? 'none' : '';
     this.controls.style.display = controls_needed ? '' : 'none';
   },
-  refreshValue: function() {
-    var self = this;
-    this.value = [];
-
-    $each(this.rows,function(i,editor) {
-      // Get the value for this editor
-      self.value[i] = editor.getValue();
-    });
-  },
   addRow: function(value) {
     this.addRowBase(value, false, function(row) { return row.table_controls; });
-  },
-  addRowButtonHandler: function() {
-    var self = this;
-    self.addRow();
-    self.refreshValue();
-    self.refreshButtons();
-    self.onChange();
   },
   toggleSetup: function() {
   },
@@ -1744,16 +1611,6 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
 
 // Multiple Editor (for when `type` is an array)
 JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
-  enable: function() {
-    this.editor.enable();
-    this.switcher.disabled = false;
-    this._super();
-  },
-  disable: function() {
-    this.editor.disable();
-    this.switcher.disabled = true;
-    this._super();
-  },
   switchEditor: function(i) {
     var self = this;
     
@@ -1796,13 +1653,13 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
     var self = this;
     
     // basic checks
-    if (!Array.isArray($get(this.schema, 'oneOf'))) {
+    if (!Array.isArray($utils.get(this.schema, 'oneOf'))) {
       throw "'multiple' editor requires an array 'oneOf'";
     }
     if (this.schema.oneOf.length === 0) {
       throw "'multiple' editor requires non-empty 'oneOf'";
     }
-    if (!$has(this.schema, 'selectKey')) {
+    if (!$utils.has(this.schema, 'selectKey')) {
       throw "'multiple' editor requires 'selectKey'";
     }
 
@@ -1816,15 +1673,15 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
     var select_titles = [];
     var select_indices = [];
     
-    $each(this.child_schemas, function(i, schema) {
-      var selectValue = $getNested(schema, 'properties', self.select_key, 'constantValue');
-      if ($isUndefined(selectValue)) {
+    $utils.each(this.child_schemas, function(i, schema) {
+      var selectValue = $utils.getNested(schema, 'properties', self.select_key, 'constantValue');
+      if ($utils.isUndefined(selectValue)) {
         self.debugPrint(schema);
         throw "'multiple' editor requires each 'oneOf' schema to have properties.(selectKey).constantValue";
       }
       self.select_values.push(selectValue);
       select_indices.push(i);
-      var title = $has(schema, 'title') ? schema.title : selectValue;
+      var title = $utils.has(schema, 'title') ? schema.title : selectValue;
       select_titles.push(title);
     });
     
@@ -1867,9 +1724,9 @@ JSONEditor.defaults.editors.multiple = JSONEditor.AbstractEditor.extend({
     
     // Determine the type by looking at the value of the selectKey property.
     var type = 0;
-    if ($isObject(val) && $has(val, self.select_key)) {
+    if ($utils.isObject(val) && $utils.has(val, self.select_key)) {
       var the_select_value = val[self.select_key];
-      $each(self.select_values, function(i, select_value) {
+      $utils.each(self.select_values, function(i, select_value) {
         if (select_value === the_select_value) {
           type = i;
           return false;
@@ -1928,7 +1785,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
   },
   buildImpl: function() {
     var self = this;
-    this.input_type = 'select';
     this.enum_options = [];
     this.enum_values = [];
     this.enum_display = [];
@@ -1937,7 +1793,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     if(this.schema.enum) {
       var display = this.schema.options && this.schema.options.enum_titles || [];
       
-      $each(this.schema.enum,function(i,option) {
+      $utils.each(this.schema.enum,function(i,option) {
         self.enum_options[i] = ""+option;
         self.enum_display[i] = ""+(display[i] || option);
         self.enum_values[i] = self.typecast(option);
@@ -1970,7 +1826,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     this.input.setAttribute('name',this.formname);
 
     if(this.schema.readOnly || this.schema.readonly) {
-      this.always_disabled = true;
       this.input.disabled = true;
     }
 
@@ -2037,16 +1892,6 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       }
     }
   },
-  enable: function() {
-    if(!this.always_disabled) {
-      this.input.disabled = false;
-    }
-    this._super();
-  },
-  disable: function() {
-    this.input.disabled = true;
-    this._super();
-  },
   destroyImpl: function() {
     if(this.label && this.label.parentNode) this.label.parentNode.removeChild(this.label);
     if(this.description && this.description.parentNode) this.description.parentNode.removeChild(this.description);
@@ -2056,11 +1901,10 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
 
 JSONEditor.defaults.editors.derived = JSONEditor.AbstractEditor.extend({
     buildImpl: function() {
-        this.always_disabled = true;
-        if ($has(this.schema, 'valueTemplate')) {
+        if ($utils.has(this.schema, 'valueTemplate')) {
             this.derived_mode = 'template';
             this.template = this.jsoneditor.compileTemplate(this.schema.valueTemplate, this.template_engine);
-        } else if ($has(this.schema, 'constantValue')) {
+        } else if ($utils.has(this.schema, 'constantValue')) {
             this.derived_mode = 'constant';
             this.value = this.schema.constantValue;
         } else {
@@ -2697,10 +2541,11 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
 });
 // Use the `derived` editor if it has the right config.
 JSONEditor.defaults.resolvers.unshift(function(schema) {
-  if($has(schema, 'valueTemplate') || $has(schema, 'constantValue')) {
+  if($utils.has(schema, 'valueTemplate') || $utils.has(schema, 'constantValue')) {
     return "derived";
   }
 });
 
   window.JSONEditor = JSONEditor;
+  window.JSONEditor_utils = $utils;
 })();
