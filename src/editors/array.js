@@ -8,6 +8,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
 
     this.hide_delete_buttons = this.options.disable_array_delete || this.jsoneditor.options.disable_array_delete;
     this.hide_move_buttons = this.options.disable_array_reorder || this.jsoneditor.options.disable_array_reorder;
+    this.hide_copy_buttons = this.options.hide_copy_buttons || this.jsoneditor.options.hide_copy_buttons;
     this.hide_add_button = this.options.disable_array_add || this.jsoneditor.options.disable_array_add;
     
     this.arrayBuildImpl();
@@ -264,6 +265,28 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       }
     }
     
+    if(!self.hide_copy_buttons) {
+      self.rows[i].copy_button = this.getButton('','copy','Copy');
+      self.rows[i].copy_button.className += ' copy';
+      self.rows[i].copy_button.setAttribute('data-i',i);
+      self.rows[i].copy_button.addEventListener('click',function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var i = this.getAttribute('data-i')*1;
+
+        var rows = self.value.slice();
+        rows.splice(i + 1, 0, rows[i]);
+
+        self.withProcessingContext(function() {
+          self.setValueImpl(rows);
+        }, 'move_button_click');
+      });
+      
+      if(controls_holder) {
+        controls_holder.appendChild(self.rows[i].copy_button);
+      }
+    }
+
     if(i && !self.hide_move_buttons) {
       self.rows[i].moveup_button = this.getButton('','moveup','Move up');
       self.rows[i].moveup_button.className += ' moveup';
@@ -289,7 +312,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         controls_holder.appendChild(self.rows[i].movedown_button);
       }
     }
-
+    
     if(value) self.rows[i].setValue(value);
   },
   moveClickHandler: function(e, button, down) {
