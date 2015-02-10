@@ -2,31 +2,21 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   getDefault: function() {
     return this.schema.default || {};
   },
-  layoutEditors: function() {
-    var self = this, i, j;
-    
-    if(!this.row_container) return;
-
-    var container = document.createElement('div');
-    $utils.each(this.computeOrder(), function(i,key) {
-      var editor = self.editors[key];
-      var row = self.theme.getGridRow();
-      container.appendChild(row);
-      
-      if(editor.options.hidden) editor.container.style.display = 'none';
-      else self.theme.setGridColumnSize(editor.container,12);
-      editor.container.className += ' container-' + key;
-      row.appendChild(editor.container);
-    });
-    
-    this.row_container.innerHTML = '';
-    this.row_container.appendChild(container);
-  },
   buildImpl: function() {
-    this.editors = {};
     var self = this;
 
+    // Get the properties from the schema.
     this.schema_properties = this.schema.properties || {};
+    
+    // Built a list of properties sorted by processingOrder.
+    var order_func = function(name) {
+      var processingOrder = self.schema_properties[name].processingOrder;
+      return typeof processingOrder === 'number' ? processingOrder : 0;
+    };
+    this.processing_order = Object.keys(self.schema_properties);
+    this.processing_order.sort(function(a, b) {
+      return order_func(a) - order_func(b);
+    });
 
     // If the object should be rendered as a table row
     if(this.options.table_row) {
@@ -34,8 +24,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     }
     // If the object should be rendered as a div
     else {
-      this.defaultProperties = this.schema.defaultProperties || Object.keys(this.schema_properties);
-
       // Text label
       this.header = document.createElement('span');
       this.header.textContent = this.getTitle();
@@ -59,6 +47,10 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       // Container for rows of child editors
       this.row_container = this.theme.getGridContainer();
       this.editor_holder.appendChild(this.row_container);
+      
+      // The div with editors.
+      this.editors_div = document.createElement('div');
+      this.row_container.appendChild(this.editors_div);
 
       // Control buttons
       this.title_controls = this.theme.getHeaderButtonHolder();
@@ -95,48 +87,55 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       }
     }
     
-    // Set the initial value, creating editors.
-    this.mySetValue({}, true);
-
-    // Fix table cell ordering
-    if(this.options.table_row) {
-      $utils.each(this.computeOrder(), function(i,key) {
-        self.editor_holder.appendChild(self.editors[key].container);
-      });
-    }
-  },
-  addObjectProperty: function(name) {
-    var self = this;
+    // Create editors.
+    this.editors = {};
+    $utils.each(this.processing_order, function(i, name) {
+      var holder;
+      var extra_opts = {};
+      if (self.options.table_row) {
+        holder = self.theme.getTableCell();
+        extra_opts.compact = true;
+      } else {
+        holder = self.theme.getChildEditorHolder();
+      }
+      
+      var schema = self.schema_properties[name];
+      var editor = self.jsoneditor.getEditorClass(schema);
+      self.editors[name] = self.jsoneditor.createEditor(editor, $utils.extend({
+        jsoneditor: self.jsoneditor,
+        schema: schema,
+        path: self.path+'.'+name,
+        parent: self,
+        container: holder
+      }, extra_opts));
+      self.editors[name].build();
+    });
     
-    // Property is already added
-    if(this.editors[name]) return;
+    // Compute the display order.
+    var display_order = $utils.orderProperties(self.editors, function(i) { return self.editors[i].schema.propertyOrder; });
     
-    var holder;
-    var extra_opts = {};
-    if (self.options.table_row) {
-      holder = self.theme.getTableCell();
-      extra_opts.compact = true;
-    } else {
-      holder = self.theme.getChildEditorHolder();
-    }
-    
-    var schema = self.schema_properties[name];
-    var editor = self.jsoneditor.getEditorClass(schema);
-    self.editor_holder.appendChild(holder);
-    self.editors[name] = self.jsoneditor.createEditor(editor, $utils.extend({
-      jsoneditor: self.jsoneditor,
-      schema: schema,
-      path: self.path+'.'+name,
-      parent: self,
-      container: holder
-    }, extra_opts));
-    self.editors[name].build();
-    
-    if (self.options.table_row) {
-      if (self.editors[name].options.hidden) {
+    // Display the editors.
+    $utils.each(display_order, function(i, name) {
+      var editor = self.editors[name];
+      var holder = editor.container;
+      if (editor.options.hidden) {
         holder.style.display = 'none';
       }
-    }
+      if (self.options.table_row) {
+        self.editor_holder.appendChild(holder);
+      } else {
+        var row = self.theme.getGridRow();
+        self.editors_div.appendChild(row);
+        if (!editor.options.hidden) {
+          self.theme.setGridColumnSize(holder, 12);
+        }
+        editor.container.className += ' container-' + name;
+        row.appendChild(holder);
+      }
+    });
+    
+    // Set the initial value.
+    this.setValueImpl({});
   },
   onChildEditorChange: function(editor) {
     this.refreshValue();
@@ -167,73 +166,27 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   },
   refreshValue: function() {
     this.value = {};
-    var self = this;
-    
     for(var i in this.editors) {
       if(!this.editors.hasOwnProperty(i)) continue;
       this.value[i] = this.editors[i].getValue();
     }
   },
   setValueImpl: function(value) {
-    this.mySetValue(value, false);
-  },
-  mySetValue: function(value, initial) {
     var self = this;
+    
     value = value || {};
-    
-    if(typeof value !== "object" || Array.isArray(value)) value = {};
-    
-    // Collect set-actions here so we can sort them.
-    var setActions = [];
-
-    // First, set the values for all of the defined properties
-    $utils.each(this.editors, function(i,editor) {
-      // Value explicitly set
-      if(typeof value[i] !== "undefined") {
-        setActions.push({name: i, value: value[i]});
-      }
-      // Otherwise, set the value to the default
-      else {
-        setActions.push({name: i});
-      }
-    });
-
-    // For the initial value, we need to make sure we actually have the editors.
-    if (initial) {
-      $utils.each(self.schema_properties, function(i, schema) {
-        if (!self.editors.hasOwnProperty(i)) {
-          setActions.push({name: i});
-        }
-      });
+    if (typeof value !== "object" || Array.isArray(value)) {
+      value = {};
     }
     
-    // Add processingOrder to set-actions.
-    $utils.each(setActions, function(ind,action) {
-      var i = action.name;
-      action.processingOrder = 0;
-      if (self.schema_properties && self.schema_properties[i] && typeof self.schema_properties[i].processingOrder !== "undefined") {
-        action.processingOrder = self.schema_properties[i].processingOrder;
-      }
+    // Set the editor values.
+    $utils.each(this.processing_order, function(i, name) {
+      var prop_value = $utils.has(value, name) ? value[name] : self.editors[name].getDefault();
+      self.editors[name].setValue(prop_value);
     });
-    
-    // Sort the set-actions.
-    setActions.sort(function(x,y) { return (x.processingOrder > y.processingOrder) - (x.processingOrder < y.processingOrder); });
-    
-    // Execute the set-actions.
-    $utils.each(setActions, function(ind, action) {
-      var i = action.name;
-      self.addObjectProperty(i);
-      var set_value = action.hasOwnProperty('value') ? action.value : self.editors[i].getDefault();
-      self.editors[i].setValue(set_value);
-    });
-    
+
     this.refreshValue();
-    this.layoutEditors();
     this.onChange();
-  },
-  computeOrder: function() {
-    var self = this;
-    return $utils.orderProperties(self.editors, function(i) { return self.editors[i].schema.propertyOrder; });
   },
   toggleCollapsed: function() {
     var self = this;
