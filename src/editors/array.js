@@ -11,6 +11,10 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     this.hide_copy_buttons = this.options.hide_copy_buttons || this.jsoneditor.options.hide_copy_buttons;
     this.hide_add_button = this.options.disable_array_add || this.jsoneditor.options.disable_array_add;
     
+    if ($utils.has(this.schema, 'copyTemplate')) {
+      this.copy_template = this.jsoneditor.compileTemplate(this.schema.copyTemplate, this.template_engine);
+    }
+    
     this.arrayBuildImpl();
 
     this.addControls();
@@ -275,7 +279,11 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         var i = this.getAttribute('data-i')*1;
 
         var rows = self.value.slice();
-        rows.splice(i + 1, 0, rows[i]);
+        var new_row = rows[i];
+        if (self.copy_template) {
+          new_row = self.copy_template({rows: rows, index: i, row: new_row});
+        }
+        rows.splice(i + 1, 0, new_row);
 
         self.withProcessingContext(function() {
           self.setValueImpl(rows);
