@@ -1,15 +1,12 @@
 JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
-  buildImpl: function() {
+  arrayBuildImpl: function() {
     var self = this;
-    
-    self.arrayBaseBuildImpl();
     
     var item_schema = this.schema.items || {};
     
     this.item_title = item_schema.title || 'row';
     this.item_default = item_schema.default || null;
     this.item_has_child_editors = item_schema.properties;
-    this.initial = true;
     
     this.table = this.theme.getTable();
     this.container.appendChild(this.table);
@@ -62,12 +59,10 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     // Row Controls column
     this.controls_header_cell = self.theme.getTableHeaderCell(" ");
     self.header_row.appendChild(this.controls_header_cell);
-
-    // Add controls
-    this.addControls();
-    
-    // Set initial value.
-    this.setValueImpl([]);
+  },
+  arrayDestroyImpl: function() {
+    if(this.table && this.table.parentNode) this.table.parentNode.removeChild(this.table);
+    this.table = null;
   },
   getItemTitle: function() {
     return this.item_title;
@@ -102,47 +97,15 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     
     return ret;
   },
-  destroyImpl: function() {
-    this.innerHTML = '';
-    if(this.table && this.table.parentNode) this.table.parentNode.removeChild(this.table);
-    this.table = null;
-  },
-  setValueImpl: function(value) {
-    // Update the array's value, adding/removing rows when necessary
-    value = value || [];
-
-    var numrows_changed = false;
-
-    var self = this;
-    $utils.each(value,function(i,val) {
-      if(self.rows[i]) {
-        self.rows[i].setValue(val);
-      }
-      else {
-        self.addRow(val);
-        numrows_changed = true;
-      }
-    });
-
-    for(var j=value.length; j<self.rows.length; j++) {
-      var holder = self.rows[j].container;
-      if(!self.item_has_child_editors) {
-        self.rows[j].row.parentNode.removeChild(self.rows[j].row);
-      }
-      self.rows[j].destroy();
-      if(holder.parentNode) holder.parentNode.removeChild(holder);
-      self.rows[j] = null;
-      numrows_changed = true;
+  destroyRow: function(row) {
+    var holder = row.container;
+    if(!this.item_has_child_editors) {
+      row.row.parentNode.removeChild(row.row);
     }
-    self.rows = self.rows.slice(0,value.length);
-
-    self.refreshValue();
-    if(numrows_changed || self.initial) self.refreshButtons();
-    self.initial = false;
-
-    self.onChange();
-          
-    // TODO: sortable
+    row.destroy();
+    if (holder.parentNode) {
+      holder.parentNode.removeChild(holder);
+    }
   },
   refreshButtonsExtraEditor: function(i, editor) {
     return !!editor.moveup_button;
@@ -156,24 +119,8 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     this.table.style.display = this.value.length === 0 ? 'none' : '';
     this.controls.style.display = controls_needed ? '' : 'none';
   },
-  refreshValue: function() {
-    var self = this;
-    this.value = [];
-
-    $utils.each(this.rows,function(i,editor) {
-      // Get the value for this editor
-      self.value[i] = editor.getValue();
-    });
-  },
   addRow: function(value) {
     this.addRowBase(value, false, function(row) { return row.table_controls; });
-  },
-  addRowButtonHandler: function() {
-    var self = this;
-    self.addRow();
-    self.refreshValue();
-    self.refreshButtons();
-    self.onChange();
   },
   toggleSetup: function() {
   },
