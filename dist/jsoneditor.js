@@ -469,8 +469,8 @@ JSONEditor.AbstractEditor = Class.extend({
   build: function() {
     var self = this;
     self.withProcessingContext(function() {
-      self.buildImpl();
       self.jsoneditor.registerEditor(self);
+      self.buildImpl();
       self.setupWatchListeners();
       self.updateHeaderText();
       self.onChange();
